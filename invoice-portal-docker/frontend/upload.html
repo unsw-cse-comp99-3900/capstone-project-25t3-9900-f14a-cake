@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Upload • Invoice Portal</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:24px;max-width:900px;margin:auto}
+    nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    nav a{padding:8px 12px;border:1px solid #ddd;border-radius:999px;text-decoration:none;color:#222}
+    nav a.active{background:#111;color:#fff;border-color:#111}
+    .right{margin-left:auto}
+    .card{border:1px solid #eee;border-radius:14px;padding:18px;margin:12px 0}
+    h2{margin:8px 0 12px}
+    .row{display:flex;gap:10px;align-items:center;margin:8px 0}
+    button{padding:9px 14px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer}
+    .drop{border:2px dashed #aaa;border-radius:12px;padding:24px;text-align:center;margin-top:8px}
+    .drop.drag{border-color:#333;background:#fafafa}
+    small.hint{color:#666}
+    progress{width:100%;height:16px;margin-top:8px}
+    .status{margin-left:8px}
+    .ok{color:#0a7} .err{color:#c33}
+    .hidden{display:none}
+    a.btn{display:inline-block;padding:9px 14px;border-radius:10px;border:1px solid #ccc;text-decoration:none;color:#222}
+    a.btn.disabled{pointer-events:none;opacity:.5}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/upload.html#create" id="t-create">Creation</a>
+    <a href="/upload.html#validate" id="t-validate">Validation</a>
+    <a href="/upload.html#send" id="t-send">Sending</a>
+    <span class="right"></span>
+    <a href="#" id="logout">Sign out</a>
+  </nav>
+
+  <section id="create" class="card">
+    <h2>Creation</h2>
+    <div class="row"><small class="hint">Accepts any file type. No processing for now.</small></div>
+    <input id="f-create" type="file" multiple />
+    <div id="d-create" class="drop">or drop files here</div>
+    <div class="row">
+      <button id="btn-create">Upload</button>
+      <a id="dl-create" class="btn disabled" href="#" download>Download last upload</a>
+      <span id="m-create" class="status"></span>
+    </div>
+    <progress id="bar-create" max="100" value="0" class="hidden"></progress>
+    <div id="out-create"></div>
+  </section>
+
+  <section id="validate" class="card hidden">
+    <h2>Validation</h2>
+    <input id="f-validate" type="file" />
+    <div id="d-validate" class="drop">or drop a file here</div>
+    <div class="row">
+      <button id="btn-validate">Upload</button>
+      <a id="dl-validate" class="btn disabled" href="#" download>Download last upload</a>
+      <span id="m-validate" class="status"></span>
+    </div>
+    <progress id="bar-validate" max="100" value="0" class="hidden"></progress>
+  </section>
+
+  <section id="send" class="card hidden">
+    <h2>Sending</h2>
+    <input id="f-send" type="file" />
+    <div id="d-send" class="drop">or drop a file here</div>
+    <div class="row">
+      <button id="btn-send">Upload</button>
+      <a id="dl-send" class="btn disabled" href="#" download>Download last upload</a>
+      <span id="m-send" class="status"></span>
+    </div>
+    <progress id="bar-send" max="100" value="0" class="hidden"></progress>
+  </section>
+
+  <script src="/common.js"></script>
+  <script>
+    if(!ensureAuthed()) throw new Error('unauth');
+
+    function section(hash){ return (hash||'#create').replace('#',''); }
+    function activate() {
+      const s = section(location.hash);
+      document.querySelectorAll('section').forEach(sec=>sec.classList.add('hidden'));
+      document.getElementById(s).classList.remove('hidden');
+      document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+      document.getElementById('t-'+s).classList.add('active');
+    }
+    window.addEventListener('hashchange', activate); activate();
+
+    function bindDrop(dropEl, inputEl, msgEl){
+      ['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e=>{
+        e.preventDefault(); e.stopPropagation(); dropEl.classList.add('drag');
+      }));
+      ['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e=>{
+        e.preventDefault(); e.stopPropagation(); dropEl.classList.remove('drag');
+      }));
+      dropEl.addEventListener('drop', e=>{
+        inputEl.files = e.dataTransfer.files;
+        if(msgEl){ msgEl.textContent = `Selected ${inputEl.files.length} file(s)`; msgEl.className='status ok'; }
+      });
+    }
+
+    function xhrUpload(url, files, onprogress){
+      return new Promise((resolve, reject)=>{
+        const form = new FormData();
+        for(const f of files) form.append('files', f);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        const token = getToken();
+        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+        xhr.upload.onprogress = onprogress || (()=>{});
+        xhr.onload = ()=> xhr.status===200 ? resolve(JSON.parse(xhr.responseText)) : reject(xhr.responseText||xhr.statusText);
+        xhr.onerror = ()=> reject('Network error');
+        xhr.send(form);
+      });
+    }
+
+    // Creation (multi-file)
+    const ic=document.getElementById('f-create'), dc=document.getElementById('d-create'), bc=document.getElementById('bar-create');
+    const mc=document.getElementById('m-create'), oc=document.getElementById('out-create'), dlc=document.getElementById('dl-create');
+    bindDrop(dc, ic, mc);
+    document.getElementById('btn-create').onclick = async ()=>{
+      if(!ic.files.length){ mc.textContent='Please select at least one file.'; mc.className='status err'; return; }
+      bc.classList.remove('hidden'); bc.value=0; mc.textContent='';
+      try{
+        const res = await xhrUpload('/api/create', ic.files, e=>{ if(e.lengthComputable) bc.value = Math.round(e.loaded*100/e.total); });
+        mc.textContent='Uploaded.'; mc.className='status ok';
+        oc.innerHTML = res.uploads.map(o=>`<div><a download href="${o.download_path}">${o.original}</a></div>`).join('');
+        if(res.uploads && res.uploads.length){
+          dlc.href = res.uploads[res.uploads.length-1].download_path;
+          dlc.classList.remove('disabled');
+        }
+      }catch(err){ mc.textContent='Upload failed: '+err; mc.className='status err'; }
+      finally{ setTimeout(()=>bc.classList.add('hidden'), 600); }
+    };
+
+    // Validation (single file)
+    const iv=document.getElementById('f-validate'), dv=document.getElementById('d-validate'), bv=document.getElementById('bar-validate');
+    const mv=document.getElementById('m-validate'), dlinkV=document.getElementById('dl-validate');
+    bindDrop(dv, iv, mv);
+    document.getElementById('btn-validate').onclick = async ()=>{
+      if(!iv.files.length){ mv.textContent='Please select a file.'; mv.className='status err'; return; }
+      bv.classList.remove('hidden'); bv.value=0; mv.textContent='';
+      try{
+        const res = await xhrUpload('/api/validate', iv.files, e=>{ if(e.lengthComputable) bv.value = Math.round(e.loaded*100/e.total); });
+        mv.textContent='Uploaded.'; mv.className='status ok';
+        dlinkV.href = res.upload.download_path; dlinkV.classList.remove('disabled');
+      }catch(err){ mv.textContent='Upload failed: '+err; mv.className='status err'; }
+      finally{ setTimeout(()=>bv.classList.add('hidden'), 600); }
+    };
+
+    // Sending (single file)
+    const isd=document.getElementById('f-send'), dsd=document.getElementById('d-send'), bsd=document.getElementById('bar-send');
+    const msd=document.getElementById('m-send'), dlinkS=document.getElementById('dl-send');
+    bindDrop(dsd, isd, msd);
+    document.getElementById('btn-send').onclick = async ()=>{
+      if(!isd.files.length){ msd.textContent='Please select a file.'; msd.className='status err'; return; }
+      bsd.classList.remove('hidden'); bsd.value=0; msd.textContent='';
+      try{
+        const res = await xhrUpload('/api/send', isd.files, e=>{ if(e.lengthComputable) bsd.value = Math.round(e.loaded*100/e.total); });
+        msd.textContent='Uploaded.'; msd.className='status ok';
+        dlinkS.href = res.upload.download_path; dlinkS.classList.remove('disabled');
+      }catch(err){ msd.textContent='Upload failed: '+err; msd.className='status err'; }
+      finally{ setTimeout(()=>bsd.classList.add('hidden'), 600); }
+    };
+
+    document.getElementById('logout').onclick = ()=>{ clearToken(); window.location.href='/login.html'; };
+  </script>
+</body>
+</html>
