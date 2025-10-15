@@ -1,0 +1,11 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+      args:
+        - API_BASE=${API_BASE}
+    ports:
+      - "8080:80"
+    environment:
+      - API_BASE=${API_BASE}
