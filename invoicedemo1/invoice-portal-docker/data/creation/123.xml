@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:ID>123</cbc:ID>
+  <cbc:IssueDate>123</cbc:IssueDate>
+  <cac:AccountingSupplierParty>
+    <cac:Party><cac:PartyName><cbc:Name>123</cbc:Name></cac:PartyName></cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party><cac:PartyName><cbc:Name>123</cbc:Name></cac:PartyName></cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:LegalMonetaryTotal>
+    <cbc:PayableAmount currencyID="AUD">15129.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="EA">123</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="AUD">15129.00</cbc:LineExtensionAmount>
+    <cac:Item><cbc:Description>123</cbc:Description></cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="AUD">123.00</cbc:PriceAmount></cac:Price>
+  </cac:InvoiceLine>
+</Invoice>
