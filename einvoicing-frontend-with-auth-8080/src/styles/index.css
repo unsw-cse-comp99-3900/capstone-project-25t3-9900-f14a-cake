@@ -1,8 +1,0 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-:root { color-scheme: light; }
-body { @apply bg-white text-gray-900; }
-.btn { @apply border px-3 py-1 rounded bg-gray-100 hover:bg-gray-200; }
-.input { @apply border px-2 py-1 rounded; }
-.card { @apply border rounded p-3; }
