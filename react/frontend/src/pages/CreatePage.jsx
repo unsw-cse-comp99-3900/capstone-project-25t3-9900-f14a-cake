@@ -120,13 +120,33 @@ const CreatePage = () => {
         return true;
     };
 
-    const handleFileUpload = (file) => {
-        if (validateFile(file)) {
-            // 在实际应用中，这里应该调用后端 API 上传文件
+    const handleFileUpload = async (file) => {
+        if (!validateFile(file)) return false;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch("http://localhost:5001/api/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                setFileError(err.error || "Upload failed");
+                return false;
+            }
+
+            const data = await response.json();
+            console.log("✅ Upload success:", data);
             setUploadedFile(file);
             return true;
+        } catch (err) {
+            console.error("❌ Upload error:", err);
+            setFileError("Server not reachable");
+            return false;
         }
-        return false;
     };
 
     const handleFileSelect = (event) => {
