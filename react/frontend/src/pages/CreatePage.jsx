@@ -115,7 +115,7 @@ const InfoConfirmStep = ({ summary, xmlPreview, onSummaryChange, onUpdateXML }) 
     { label: "Document Title", field: "document_title", type: "text" },
     { label: "Invoice Number", field: "invoice_number", type: "text" },
     { label: "Reference Number", field: "reference_number", type: "text" },
-    { label: "Issue Date", field: "date", type: "date" },
+    { label: "Issue Date", field: "issue_date", type: "date" },
     { label: "Due Date", field: "due_date", type: "date" },
     { label: "Currency Code", field: "currency_code", type: "text" },
     { label: "Subtotal", field: "subtotal", type: "number" },
