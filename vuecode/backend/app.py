@@ -487,7 +487,8 @@ def send_email():
         if not email or not xml_filename:
             return jsonify({'error': 'Email and XML filename are required'}), 400
         
-
+        # TODO: 实现邮件发送功能
+        # 这里需要配置SMTP服务器
         
         print(f"Would send {xml_filename} to {email}")
         
