@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+uploads/
+*.json
+*.xml
+!example/*.json
+!example/*.xml
+.env
+.DS_Store
+

@@ -1,0 +1,11 @@
+# Veryfi API Credentials
+VERYFI_CLIENT_ID=your_client_id
+VERYFI_AUTHORIZATION=apikey your_username:your_api_key
+
+# ESS Validator Token
+ESS_VALIDATOR_TOKEN=your_ess_validator_token
+
+# Upload Configuration
+UPLOAD_FOLDER=uploads
+MAX_FILE_SIZE_MB=10
+
