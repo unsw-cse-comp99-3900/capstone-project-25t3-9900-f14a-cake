@@ -1,0 +1,7 @@
+node_modules
+dist
+public
+*.config.js
+*.config.ts
+pnpm-lock.yaml
+

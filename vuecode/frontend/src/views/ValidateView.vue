@@ -15,9 +15,9 @@ const goBack = () => {
       <div class="header-content">
         <h1 class="header-title">XML Invoice Validation</h1>
         <el-button 
-          @click="goBack" 
-          class="back-button"
+          class="back-button" 
           :icon="ArrowLeft"
+          @click="goBack"
         >
           Back to Home
         </el-button>
