@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Upload, ArrowLeft, DocumentChecked, Plus, Delete, Download } from '@element-plus/icons-vue'
+import { Upload, ArrowLeft, DocumentChecked, Plus, Delete, Download, Loading } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
@@ -15,11 +15,11 @@ const isProcessing = ref(false)
 const xmlContent = ref('')
 const xmlFilename = ref('')
 const recipientEmail = ref('')
+const validationResult = ref(null)
+const isValidating = ref(false)
 
-// 表单引用
 const formRef = ref(null)
 
-// 表单数据
 const invoiceForm = ref({
   invoice_info: {
     invoice_number: '',
@@ -59,7 +59,6 @@ const invoiceForm = ref({
   }
 })
 
-// 表单验证规则
 const formRules = {
   invoice_info: {
     invoice_number: [
@@ -82,36 +81,20 @@ const formRules = {
     ]
   },
   supplier: {
-    name: [
-      { required: true, message: 'Supplier name is required', trigger: 'blur' }
-    ],
-    street_name: [
-      { required: true, message: 'Street name is required', trigger: 'blur' }
-    ],
-    city_name: [
-      { required: true, message: 'City is required', trigger: 'blur' }
-    ],
-    postal_zone: [
-      { required: true, message: 'Postal code is required', trigger: 'blur' }
-    ],
+    name: [{ required: true, message: 'Supplier name is required', trigger: 'blur' }],
+    street_name: [{ required: true, message: 'Street name is required', trigger: 'blur' }],
+    city_name: [{ required: true, message: 'City is required', trigger: 'blur' }],
+    postal_zone: [{ required: true, message: 'Postal code is required', trigger: 'blur' }],
     abn: [
       { required: true, message: 'ABN is required', trigger: 'blur' },
       { pattern: /^\d{11}$/, message: 'ABN must be 11 digits', trigger: 'blur' }
     ]
   },
   customer: {
-    name: [
-      { required: true, message: 'Customer name is required', trigger: 'blur' }
-    ],
-    street_name: [
-      { required: true, message: 'Street name is required', trigger: 'blur' }
-    ],
-    city_name: [
-      { required: true, message: 'City is required', trigger: 'blur' }
-    ],
-    postal_zone: [
-      { required: true, message: 'Postal code is required', trigger: 'blur' }
-    ],
+    name: [{ required: true, message: 'Customer name is required', trigger: 'blur' }],
+    street_name: [{ required: true, message: 'Street name is required', trigger: 'blur' }],
+    city_name: [{ required: true, message: 'City is required', trigger: 'blur' }],
+    postal_zone: [{ required: true, message: 'Postal code is required', trigger: 'blur' }],
     abn: [
       { required: true, message: 'ABN is required', trigger: 'blur' },
       { pattern: /^\d{11}$/, message: 'ABN must be 11 digits', trigger: 'blur' }
@@ -119,7 +102,6 @@ const formRules = {
   }
 }
 
-// 验证单个商品行
 const validateLineItem = (item) => {
   if (!item.name || item.name.trim() === '') {
     return 'Item name is required'
@@ -127,10 +109,10 @@ const validateLineItem = (item) => {
   if (!item.quantity || item.quantity <= 0) {
     return 'Quantity must be greater than 0'
   }
-  if (!item.unit_price || item.unit_price < 0) {
+  if (item.unit_price === null || item.unit_price === undefined || item.unit_price < 0) {
     return 'Unit price must be 0 or greater'
   }
-  if (!item.line_total || item.line_total < 0) {
+  if (item.line_total === null || item.line_total === undefined || item.line_total < 0) {
     return 'Line total must be 0 or greater'
   }
   if (item.tax_percent === null || item.tax_percent === undefined || item.tax_percent === '') {
@@ -142,7 +124,6 @@ const validateLineItem = (item) => {
   return null
 }
 
-// 验证所有商品行
 const validateAllLineItems = () => {
   for (let i = 0; i < invoiceForm.value.line_items.length; i++) {
     const error = validateLineItem(invoiceForm.value.line_items[i])
@@ -157,7 +138,7 @@ const validateAllLineItems = () => {
 const steps = [
   { title: 'Upload', description: 'Upload your invoice file' },
   { title: 'Review', description: 'Review and edit details' },
-  { title: 'Generate', description: 'Generate XML' },
+  { title: 'Generate & Validate', description: 'Generate and validate XML' },
   { title: 'Send', description: 'Send via email' },
 ]
 
@@ -285,6 +266,7 @@ const downloadJSON = () => {
 
 const generateXML = async () => {
   isProcessing.value = true
+  validationResult.value = null
   
   try {
     const response = await fetch('/api/generate-xml', {
@@ -306,13 +288,59 @@ const generateXML = async () => {
       xmlContent.value = data.xml_content
       xmlFilename.value = data.filename
       ElMessage.success('XML generated successfully!')
-      currentStep.value = 3
+      
+      // 自动开始验证
+      await validateXML()
     }
   } catch (error) {
     console.error('XML Generation Error:', error)
     ElMessage.error(`Failed to generate XML: ${error.message}`)
   } finally {
     isProcessing.value = false
+  }
+}
+
+const validateXML = async () => {
+  if (!xmlContent.value) {
+    ElMessage.warning('No XML content to validate')
+    return
+  }
+
+  isValidating.value = true
+  
+  try {
+    const response = await fetch('/api/validate-xml', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        xml_content: xmlContent.value
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      ElMessage.error(data.error || 'Failed to validate XML')
+      validationResult.value = { success: false, error: data.error }
+      return
+    }
+
+    validationResult.value = data
+    
+    if (data.success) {
+      ElMessage.success('XML validation passed!')
+    } else {
+      ElMessage.warning('XML validation failed. Please check the errors.')
+    }
+    
+  } catch (error) {
+    console.error('Validation Error:', error)
+    ElMessage.error(`Failed to validate XML: ${error.message}`)
+    validationResult.value = { success: false, error: error.message }
+  } finally {
+    isValidating.value = false
   }
 }
 
@@ -408,26 +436,22 @@ const nextStep = async () => {
   if (currentStep.value === 0) {
     await processOCR()
   } else if (currentStep.value === 1) {
-    // 验证表单
     if (!formRef.value) {
       ElMessage.error('Form reference not found')
       return
     }
 
     try {
-      // 验证基础字段
       await formRef.value.validate()
     } catch {
       ElMessage.error('Please fill in all required fields correctly')
       return
     }
 
-    // 验证商品行
     if (!validateAllLineItems()) {
       return
     }
 
-    // 金额验证
     if (amountMismatch.value) {
       try {
         await ElMessageBox.confirm(
@@ -446,7 +470,12 @@ const nextStep = async () => {
     
     currentStep.value = 2
   } else if (currentStep.value === 2) {
-    await generateXML()
+    // 检查是否已验证通过
+    if (!validationResult.value || !validationResult.value.success) {
+      ElMessage.error('Please generate and validate the XML first')
+      return
+    }
+    currentStep.value = 3
   }
 }
 
@@ -462,7 +491,7 @@ const prevStep = () => {
     <header class="header">
       <div class="header-content">
         <h1 class="page-title">E-Invoice Creation</h1>
-        <el-button text :icon="ArrowLeft" class="back-btn" @click="goBack">
+        <el-button text :icon="ArrowLeft" @click="goBack" class="back-btn">
           Back to Home
         </el-button>
       </div>
@@ -788,11 +817,13 @@ const prevStep = () => {
           </el-form>
         </div>
 
-        <!-- Step 2: Preview XML -->
+        <!-- Step 2: Generate & Validate XML -->
         <div v-show="currentStep === 2" class="step-content">
-          <h2 class="section-title">Ready to Generate XML</h2>
-          <p class="section-subtitle">Click the button below to generate a UBL-compliant XML invoice</p>
-          <div class="preview-action">
+          <h2 class="section-title">Generate & Validate XML</h2>
+          <p class="section-subtitle">Generate UBL-compliant XML and validate against AUNZ rules</p>
+          
+          <!-- 生成按钮 -->
+          <div v-if="!xmlContent" class="preview-action">
             <el-button 
               type="primary" 
               size="large"
@@ -802,6 +833,73 @@ const prevStep = () => {
               Generate XML
             </el-button>
           </div>
+
+          <!-- XML预览和验证结果 -->
+          <div v-else class="validation-area">
+            <!-- XML内容 -->
+            <div class="xml-viewer">
+              <div class="viewer-header">
+                <span class="viewer-title">Generated XML Content</span>
+                <el-button :icon="Download" size="small" @click="downloadXML">
+                  Download
+                </el-button>
+              </div>
+              <div class="viewer-content">
+                <pre>{{ xmlContent }}</pre>
+              </div>
+            </div>
+
+            <!-- 验证状态 -->
+            <div class="validation-status">
+              <div v-if="isValidating" class="validating">
+                <el-icon class="rotating"><Loading /></el-icon>
+                <span>Validating XML...</span>
+              </div>
+              
+              <div v-else-if="validationResult" class="validation-results">
+                <!-- 整体状态 -->
+                <el-alert 
+                  :type="validationResult.success ? 'success' : 'error'"
+                  :title="validationResult.success ? 'Validation Passed' : 'Validation Failed'"
+                  :closable="false"
+                  show-icon
+                  class="main-status"
+                >
+                  {{ validationResult.success ? 'All validation rules passed successfully!' : 'Some validation rules failed. Please check the details below.' }}
+                </el-alert>
+
+                <!-- 各规则详情 -->
+                <div class="rules-details">
+                  <div 
+                    v-for="(result, rule) in validationResult.results" 
+                    :key="rule"
+                    class="rule-card"
+                    :class="{ success: result.successful, error: !result.successful }"
+                  >
+                    <div class="rule-header">
+                      <span class="rule-name">{{ rule }}</span>
+                      <el-tag :type="result.successful ? 'success' : 'danger'" size="small">
+                        {{ result.successful ? 'PASSED' : 'FAILED' }}
+                      </el-tag>
+                    </div>
+                    <div class="rule-body">
+                      <p class="rule-message">{{ result.message }}</p>
+                      <div v-if="!result.successful && result.error" class="rule-error">
+                        <strong>Error:</strong> {{ result.error }}
+                      </div>
+                      <div v-if="result.assertion_errors_count > 0" class="rule-stats">
+                        <span>Assertion Errors: {{ result.assertion_errors_count }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="no-validation">
+                <p>Generating XML and starting validation...</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Step 3: Send Email -->
@@ -810,15 +908,12 @@ const prevStep = () => {
             <h2 class="section-title">Send Invoice via Email</h2>
             <p class="section-subtitle">Enter the recipient's email address to send the XML invoice</p>
             
-            <div class="xml-preview">
+            <div class="xml-preview-compact">
               <div class="preview-header">
-                <span class="preview-title">Generated XML File</span>
+                <span class="preview-title">{{ xmlFilename }}</span>
                 <el-button :icon="Download" size="small" @click="downloadXML">
                   Download XML
                 </el-button>
-              </div>
-              <div class="preview-content">
-                <pre>{{ xmlContent.slice(0, 500) }}...</pre>
               </div>
             </div>
 
@@ -859,14 +954,14 @@ const prevStep = () => {
           Previous
         </el-button>
         <el-button 
-          v-if="currentStep < 2"
+          v-if="currentStep < 3"
           type="primary" 
           size="large" 
           :loading="isProcessing"
-          :disabled="!uploadFile && currentStep === 0"
+          :disabled="(!uploadFile && currentStep === 0) || (currentStep === 2 && (!validationResult || !validationResult.success))"
           @click="nextStep"
         >
-          {{ currentStep === 0 ? 'Process Document' : 'Next Step' }}
+          {{ currentStep === 0 ? 'Process Document' : currentStep === 2 ? 'Proceed to Send' : 'Next Step' }}
         </el-button>
       </div>
     </main>
@@ -988,14 +1083,8 @@ const prevStep = () => {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .section-title {
@@ -1025,15 +1114,13 @@ const prevStep = () => {
   margin: 0;
 }
 
-/* Upload Area */
+/* Upload */
 .upload-area {
   max-width: 700px;
   margin: 0 auto;
 }
 
-:deep(.uploader) {
-  width: 100%;
-}
+:deep(.uploader) { width: 100%; }
 
 :deep(.el-upload-dragger) {
   background: rgba(16, 185, 129, 0.05);
@@ -1077,34 +1164,14 @@ const prevStep = () => {
   gap: 1rem;
 }
 
-.file-icon {
-  font-size: 32px;
-  color: #10b981;
-}
-
-.file-details {
-  flex: 1;
-}
-
-.file-name {
-  font-size: 0.95rem;
-  color: #ffffff;
-  margin-bottom: 0.25rem;
-}
-
-.file-size {
-  font-size: 0.85rem;
-  color: #6b7280;
-}
+.file-icon { font-size: 32px; color: #10b981; }
+.file-details { flex: 1; }
+.file-name { font-size: 0.95rem; color: #ffffff; margin-bottom: 0.25rem; }
+.file-size { font-size: 0.85rem; color: #6b7280; }
 
 /* Form */
-.form-step {
-  max-width: 100%;
-}
-
-.invoice-form {
-  margin-top: 2rem;
-}
+.form-step { max-width: 100%; }
+.invoice-form { margin-top: 2rem; }
 
 .form-section {
   margin-bottom: 2rem;
@@ -1153,18 +1220,9 @@ const prevStep = () => {
   font-family: 'Courier New', monospace;
 }
 
-:deep(.el-form-item__label) {
-  color: #9ca3af !important;
-  font-weight: 500;
-}
-
-:deep(.el-form-item.is-error .el-input__wrapper) {
-  box-shadow: 0 0 0 1px #f56c6c inset !important;
-}
-
-:deep(.el-form-item__error) {
-  color: #f56c6c;
-}
+:deep(.el-form-item__label) { color: #9ca3af !important; font-weight: 500; }
+:deep(.el-form-item.is-error .el-input__wrapper) { box-shadow: 0 0 0 1px #f56c6c inset !important; }
+:deep(.el-form-item__error) { color: #f56c6c; }
 
 :deep(.el-input__wrapper) {
   background-color: rgba(255, 255, 255, 0.05) !important;
@@ -1176,17 +1234,9 @@ const prevStep = () => {
   box-shadow: 0 0 0 1px #10b981 inset !important;
 }
 
-:deep(.el-input__inner) {
-  color: #ffffff !important;
-}
-
-:deep(.el-input-number .el-input__wrapper) {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-:deep(.el-select .el-input__wrapper) {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
+:deep(.el-input__inner) { color: #ffffff !important; }
+:deep(.el-input-number .el-input__wrapper) { background-color: rgba(255, 255, 255, 0.05) !important; }
+:deep(.el-select .el-input__wrapper) { background-color: rgba(255, 255, 255, 0.05) !important; }
 
 .line-items-table {
   display: flex;
@@ -1235,46 +1285,173 @@ const prevStep = () => {
   border-radius: 8px;
 }
 
-.summary-row label {
-  color: #9ca3af;
-  font-weight: 500;
-  font-size: 0.95rem;
-}
-
-.summary-row .amount {
-  color: #10b981;
-  font-weight: 600;
-  font-size: 1.2rem;
-}
+.summary-row label { color: #9ca3af; font-weight: 500; font-size: 0.95rem; }
+.summary-row .amount { color: #10b981; font-weight: 600; font-size: 1.2rem; }
 
 .summary-row.total-row {
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-.summary-row.total-row .amount {
-  font-size: 1.4rem;
-}
+.summary-row.total-row .amount { font-size: 1.4rem; }
 
 .summary-row.extracted-row {
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-.summary-row.extracted-row .amount {
-  color: #60a5fa;
-}
+.summary-row.extracted-row .amount { color: #60a5fa; }
 
 .mismatch-alert,
-.match-alert {
-  margin-top: 0;
-}
+.match-alert { margin-top: 0; }
 
-/* Step 2 */
+/* Step 2: XML Validation */
 .preview-action {
   display: flex;
   justify-content: center;
   margin-top: 3rem;
+}
+
+.validation-area {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.xml-viewer {
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.viewer-title {
+  font-weight: 600;
+  color: #10b981;
+}
+
+.viewer-content {
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.viewer-content pre {
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.validation-status {
+  margin-top: 1rem;
+}
+
+.validating {
+  text-align: center;
+  padding: 2rem;
+  color: #10b981;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.rotating {
+  font-size: 32px;
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.validation-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.main-status {
+  font-size: 1rem;
+}
+
+.rules-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.rule-card {
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid;
+}
+
+.rule-card.success {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.rule-card.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.rule-name {
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+.rule-body {
+  font-size: 0.9rem;
+}
+
+.rule-message {
+  color: #9ca3af;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.rule-error {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 0.85rem;
+}
+
+.rule-stats {
+  margin-top: 0.5rem;
+  color: #f59e0b;
+  font-size: 0.85rem;
+}
+
+.no-validation {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
 }
 
 /* Step 3 */
@@ -1283,7 +1460,7 @@ const prevStep = () => {
   margin: 0 auto;
 }
 
-.xml-preview {
+.xml-preview-compact {
   margin: 2rem 0;
   border: 1px solid rgba(16, 185, 129, 0.2);
   border-radius: 12px;
@@ -1301,22 +1478,6 @@ const prevStep = () => {
 .preview-title {
   font-weight: 600;
   color: #10b981;
-}
-
-.preview-content {
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.3);
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.preview-content pre {
-  color: #9ca3af;
-  font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
 }
 
 .email-form {
@@ -1345,7 +1506,7 @@ const prevStep = () => {
     padding: 1.5rem;
   }
 
-  .summary-grid {
+  .rules-details {
     grid-template-columns: 1fr;
   }
 
