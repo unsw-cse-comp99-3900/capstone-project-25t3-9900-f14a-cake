@@ -53,6 +53,13 @@ def handle_ocr():
             'message': 'Document processed successfully'
         })
         
+    except ValueError as e:
+        # 文档类型错误
+        print(f"ERROR: Document type validation failed: {str(e)}")
+        return jsonify({
+            'error': 'Invalid document type',
+            'details': str(e)
+        }), 400
     except requests.Timeout:
         print("ERROR: Request timeout")
         return jsonify({'error': 'Request timeout. Please try again.'}), 504
