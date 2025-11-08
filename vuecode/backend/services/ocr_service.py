@@ -132,6 +132,15 @@ def process_ocr(file, client_id, authorization, upload_folder):
     
     ocr_data = response.json()
     
+    # 验证文档类型
+    document_type = ocr_data.get('document_type', '')
+    if document_type != 'invoice':
+        raise ValueError(
+            f"Document type '{document_type}' is not supported. "
+            f"This system only processes invoice documents. "
+            f"Please upload a valid invoice file."
+        )
+    
     # 使用时间戳保存结果文件
     filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -142,7 +151,8 @@ def process_ocr(file, client_id, authorization, upload_folder):
     with open(result_path, 'w', encoding='utf-8') as f:
         json.dump(ocr_data, f, indent=2, ensure_ascii=False)
     
-    print(f"SUCCESS: OCR completed! Result saved to: {result_path}")
+    print(f"SUCCESS: OCR completed! Document type: {document_type}")
+    print(f"Result saved to: {result_path}")
     
     return ocr_data, result_filename
 
