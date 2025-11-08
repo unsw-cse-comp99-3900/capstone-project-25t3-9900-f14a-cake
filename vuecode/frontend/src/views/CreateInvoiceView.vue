@@ -1,139 +1,56 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Upload, ArrowLeft, DocumentChecked, Plus, Delete, Download, Loading } from '@element-plus/icons-vue'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useInvoiceForm } from '@/composables/useInvoiceForm'
+import { useFileUpload } from '@/composables/useFileUpload'
+import { useXmlOperations } from '@/composables/useXmlOperations'
+import FileUploader from '@/components/FileUploader.vue'
+import InvoiceForm from '@/components/InvoiceForm.vue'
+import LineItemsEditor from '@/components/LineItemsEditor.vue'
+import XmlValidator from '@/components/XmlValidator.vue'
 
 const router = useRouter()
-
 const currentStep = ref(0)
-const uploadFile = ref(null)
-const fileList = ref([])
-const ocrResult = ref(null)
-const ocrFilename = ref('')
 const isProcessing = ref(false)
-const xmlContent = ref('')
-const xmlFilename = ref('')
 const recipientEmail = ref('')
-const validationResult = ref(null)
-const isValidating = ref(false)
-
 const formRef = ref(null)
 
-const invoiceForm = ref({
-  invoice_info: {
-    invoice_number: '',
-    issue_date: '',
-    due_date: '',
-    currency_code: 'AUD',
-    buyer_reference: 'N/A'
-  },
-  supplier: {
-    name: '',
-    street_name: '',
-    city_name: '',
-    postal_zone: '',
-    abn: '',
-    raw_address: ''
-  },
-  customer: {
-    name: '',
-    street_name: '',
-    city_name: '',
-    postal_zone: '',
-    abn: '',
-    raw_address: ''
-  },
-  line_items: [{
-    name: '',
-    quantity: 1,
-    unit_code: 'EA',
-    unit_price: 0,
-    line_total: 0,
-    tax_percent: null
-  }],
-  summary: {
-    subtotal: 0,
-    tax_amount: 0,
-    total: 0
-  }
-})
+// 使用composables
+const {
+  invoiceForm,
+  formRules,
+  calculatedSubtotal,
+  calculatedTaxAmount,
+  calculatedTotal,
+  extractedTotal,
+  amountMismatch,
+  addLineItem,
+  removeLineItem,
+  updateLineTotal,
+  validateAllLineItems
+} = useInvoiceForm()
 
-const formRules = {
-  invoice_info: {
-    invoice_number: [
-      { required: true, message: 'Invoice number is required', trigger: 'blur' }
-    ],
-    issue_date: [
-      { required: true, message: 'Issue date is required', trigger: 'blur' },
-      { pattern: /^\d{4}-\d{2}-\d{2}$/, message: 'Format: YYYY-MM-DD', trigger: 'blur' }
-    ],
-    due_date: [
-      { required: true, message: 'Due date is required', trigger: 'blur' },
-      { pattern: /^\d{4}-\d{2}-\d{2}$/, message: 'Format: YYYY-MM-DD', trigger: 'blur' }
-    ],
-    currency_code: [
-      { required: true, message: 'Currency code is required', trigger: 'blur' },
-      { pattern: /^[A-Z]{3}$/, message: 'Must be 3 uppercase letters (e.g., AUD)', trigger: 'blur' }
-    ],
-    buyer_reference: [
-      { required: true, message: 'Buyer reference is required', trigger: 'blur' }
-    ]
-  },
-  supplier: {
-    name: [{ required: true, message: 'Supplier name is required', trigger: 'blur' }],
-    street_name: [{ required: true, message: 'Street name is required', trigger: 'blur' }],
-    city_name: [{ required: true, message: 'City is required', trigger: 'blur' }],
-    postal_zone: [{ required: true, message: 'Postal code is required', trigger: 'blur' }],
-    abn: [
-      { required: true, message: 'ABN is required', trigger: 'blur' },
-      { pattern: /^\d{11}$/, message: 'ABN must be 11 digits', trigger: 'blur' }
-    ]
-  },
-  customer: {
-    name: [{ required: true, message: 'Customer name is required', trigger: 'blur' }],
-    street_name: [{ required: true, message: 'Street name is required', trigger: 'blur' }],
-    city_name: [{ required: true, message: 'City is required', trigger: 'blur' }],
-    postal_zone: [{ required: true, message: 'Postal code is required', trigger: 'blur' }],
-    abn: [
-      { required: true, message: 'ABN is required', trigger: 'blur' },
-      { pattern: /^\d{11}$/, message: 'ABN must be 11 digits', trigger: 'blur' }
-    ]
-  }
-}
+const {
+  uploadFile,
+  fileList,
+  ocrFilename,
+  beforeUpload,
+  handleFileChange,
+  handleRemove,
+  processOCR,
+  downloadJSON
+} = useFileUpload()
 
-const validateLineItem = (item) => {
-  if (!item.name || item.name.trim() === '') {
-    return 'Item name is required'
-  }
-  if (!item.quantity || item.quantity <= 0) {
-    return 'Quantity must be greater than 0'
-  }
-  if (item.unit_price === null || item.unit_price === undefined || item.unit_price < 0) {
-    return 'Unit price must be 0 or greater'
-  }
-  if (item.line_total === null || item.line_total === undefined || item.line_total < 0) {
-    return 'Line total must be 0 or greater'
-  }
-  if (item.tax_percent === null || item.tax_percent === undefined || item.tax_percent === '') {
-    return 'Tax percentage is required'
-  }
-  if (item.tax_percent < 0 || item.tax_percent > 100) {
-    return 'Tax percentage must be between 0 and 100'
-  }
-  return null
-}
-
-const validateAllLineItems = () => {
-  for (let i = 0; i < invoiceForm.value.line_items.length; i++) {
-    const error = validateLineItem(invoiceForm.value.line_items[i])
-    if (error) {
-      ElMessage.error(`Line item ${i + 1}: ${error}`)
-      return false
-    }
-  }
-  return true
-}
+const {
+  xmlContent,
+  xmlFilename,
+  validationResult,
+  isValidating,
+  generateXML,
+  downloadXML
+} = useXmlOperations()
 
 const steps = [
   { title: 'Upload', description: 'Upload your invoice file' },
@@ -144,220 +61,26 @@ const steps = [
 
 const unitOptions = ['EA', 'HUR', 'KGM', 'MTR', 'LTR', 'SET', 'BOX', 'PKG', 'DAY']
 
-const calculatedSubtotal = computed(() => {
-  return invoiceForm.value.line_items.reduce((sum, item) => {
-    return sum + (parseFloat(item.line_total) || 0)
-  }, 0)
-})
-
-const calculatedTaxAmount = computed(() => {
-  return invoiceForm.value.line_items.reduce((sum, item) => {
-    const lineTotal = parseFloat(item.line_total) || 0
-    const taxPercent = parseFloat(item.tax_percent) || 0
-    return sum + (lineTotal * taxPercent / 100)
-  }, 0)
-})
-
-const calculatedTotal = computed(() => {
-  return calculatedSubtotal.value + calculatedTaxAmount.value
-})
-
-const extractedTotal = computed(() => {
-  return parseFloat(invoiceForm.value.summary.total) || 0
-})
-
-const amountMismatch = computed(() => {
-  const diff = Math.abs(calculatedTotal.value - extractedTotal.value)
-  return diff > 0.01
-})
-
-const beforeUpload = (file) => {
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg']
-  const isAllowedType = allowedTypes.includes(file.type)
-  const isLt10M = file.size / 1024 / 1024 < 10
-
-  if (!isAllowedType) {
-    ElMessage.error('Only PDF, JPG, and JPEG files are supported!')
-    return false
-  }
-  if (!isLt10M) {
-    ElMessage.error('File size cannot exceed 10MB!')
-    return false
-  }
-  return true
+const goBack = () => {
+  router.push('/')
 }
 
-const handleFileChange = (file) => {
-  uploadFile.value = file.raw
-  fileList.value = [file]
+const handleOCRSuccess = (extracted) => {
+  invoiceForm.value = JSON.parse(JSON.stringify(extracted))
+  currentStep.value = 1
 }
 
-const handleRemove = () => {
-  uploadFile.value = null
-  fileList.value = []
-}
-
-const processOCR = async () => {
-  if (!uploadFile.value) {
-    ElMessage.warning('Please upload a file first!')
-    return
-  }
-
+const handleProcessOCR = async () => {
   isProcessing.value = true
-  
-  try {
-    const formData = new FormData()
-    formData.append('file', uploadFile.value)
-
-    const response = await fetch('/api/ocr', {
-      method: 'POST',
-      body: formData,
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      const errorMsg = data.error || 'OCR processing failed'
-      const details = data.details ? `\n${data.details}` : ''
-      ElMessage.error({
-        message: errorMsg + details,
-        duration: 5000,
-        showClose: true
-      })
-      return
-    }
-
-    if (data.success && data.extracted) {
-      ocrResult.value = data
-      ocrFilename.value = data.json_filename || ''
-      
-      invoiceForm.value = JSON.parse(JSON.stringify(data.extracted))
-      
-      ElMessage.success('Document processed successfully!')
-      currentStep.value = 1
-    } else {
-      ElMessage.error('Unexpected response format')
-    }
-  } catch (error) {
-    console.error('OCR Error:', error)
-    ElMessage.error({
-      message: `Failed to process document: ${error.message}`,
-      duration: 5000,
-      showClose: true
-    })
-  } finally {
-    isProcessing.value = false
-  }
+  const success = await processOCR(handleOCRSuccess)
+  isProcessing.value = false
+  return success
 }
 
-const downloadJSON = () => {
-  if (!ocrFilename.value) {
-    ElMessage.warning('No JSON file available')
-    return
-  }
-  
-  const url = `/api/download-json/${ocrFilename.value}`
-  const a = document.createElement('a')
-  a.href = url
-  a.download = ocrFilename.value
-  a.click()
-  ElMessage.success('Downloading JSON file...')
-}
-
-const generateXML = async () => {
+const handleGenerateXML = async () => {
   isProcessing.value = true
-  validationResult.value = null
-  
-  try {
-    const response = await fetch('/api/generate-xml', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(invoiceForm.value),
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      ElMessage.error(data.error || 'Failed to generate XML')
-      return
-    }
-
-    if (data.success) {
-      xmlContent.value = data.xml_content
-      xmlFilename.value = data.filename
-      ElMessage.success('XML generated successfully!')
-      
-      // 自动开始验证
-      await validateXML()
-    }
-  } catch (error) {
-    console.error('XML Generation Error:', error)
-    ElMessage.error(`Failed to generate XML: ${error.message}`)
-  } finally {
-    isProcessing.value = false
-  }
-}
-
-const validateXML = async () => {
-  if (!xmlContent.value) {
-    ElMessage.warning('No XML content to validate')
-    return
-  }
-
-  isValidating.value = true
-  
-  try {
-    const response = await fetch('/api/validate-xml', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        xml_content: xmlContent.value
-      }),
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      ElMessage.error(data.error || 'Failed to validate XML')
-      validationResult.value = { success: false, error: data.error }
-      return
-    }
-
-    validationResult.value = data
-    
-    if (data.success) {
-      ElMessage.success('XML validation passed!')
-    } else {
-      ElMessage.warning('XML validation failed. Please check the errors.')
-    }
-    
-  } catch (error) {
-    console.error('Validation Error:', error)
-    ElMessage.error(`Failed to validate XML: ${error.message}`)
-    validationResult.value = { success: false, error: error.message }
-  } finally {
-    isValidating.value = false
-  }
-}
-
-const downloadXML = () => {
-  if (!xmlContent.value) {
-    ElMessage.warning('No XML content available')
-    return
-  }
-  
-  const blob = new Blob([xmlContent.value], { type: 'application/xml' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = xmlFilename.value || 'invoice.xml'
-  a.click()
-  URL.revokeObjectURL(url)
-  ElMessage.success('XML downloaded!')
+  await generateXML(invoiceForm.value)
+  isProcessing.value = false
 }
 
 const sendEmail = async () => {
@@ -403,38 +126,9 @@ const sendEmail = async () => {
   }
 }
 
-const addLineItem = () => {
-  invoiceForm.value.line_items.push({
-    name: '',
-    quantity: 1,
-    unit_code: 'EA',
-    unit_price: 0,
-    line_total: 0,
-    tax_percent: null
-  })
-}
-
-const removeLineItem = (index) => {
-  if (invoiceForm.value.line_items.length <= 1) {
-    ElMessage.warning('At least one line item is required')
-    return
-  }
-  invoiceForm.value.line_items.splice(index, 1)
-}
-
-const updateLineTotal = (item) => {
-  const qty = parseFloat(item.quantity) || 0
-  const price = parseFloat(item.unit_price) || 0
-  item.line_total = qty * price
-}
-
-const goBack = () => {
-  router.push('/')
-}
-
 const nextStep = async () => {
   if (currentStep.value === 0) {
-    await processOCR()
+    await handleProcessOCR()
   } else if (currentStep.value === 1) {
     if (!formRef.value) {
       ElMessage.error('Form reference not found')
@@ -448,7 +142,7 @@ const nextStep = async () => {
       return
     }
 
-    if (!validateAllLineItems()) {
+    if (!validateAllLineItems(ElMessage)) {
       return
     }
 
@@ -470,9 +164,8 @@ const nextStep = async () => {
     
     currentStep.value = 2
   } else if (currentStep.value === 2) {
-    // 检查是否已验证通过
     if (!validationResult.value || !validationResult.value.success) {
-      ElMessage.error('Please generate and validate the XML first')
+      ElMessage.error('Please generate and validate the XML first. Both validation rules must pass.')
       return
     }
     currentStep.value = 3
@@ -491,13 +184,14 @@ const prevStep = () => {
     <header class="header">
       <div class="header-content">
         <h1 class="page-title">E-Invoice Creation</h1>
-        <el-button text :icon="ArrowLeft" @click="goBack" class="back-btn">
+        <el-button text :icon="ArrowLeft" class="back-btn" @click="goBack">
           Back to Home
         </el-button>
       </div>
     </header>
 
     <main class="main-content">
+      <!-- Progress Steps -->
       <div class="steps">
         <div 
           v-for="(step, index) in steps" 
@@ -519,401 +213,65 @@ const prevStep = () => {
       <div class="content-card">
         <!-- Step 0: Upload -->
         <div v-show="currentStep === 0" class="step-content">
-          <div class="upload-area">
-            <h2 class="section-title">Upload Invoice Document</h2>
-            <p class="section-subtitle">Supported formats: PDF, JPG, JPEG (Max: 10MB)</p>
-            
-            <el-upload
-              class="uploader"
-              drag
-              :before-upload="beforeUpload"
-              :on-change="handleFileChange"
-              :on-remove="handleRemove"
-              :file-list="fileList"
-              :auto-upload="false"
-              :limit="1"
-            >
-              <el-icon class="upload-icon"><Upload /></el-icon>
-              <div class="upload-text">
-                <div class="upload-title">Drop file here or click to upload</div>
-                <div class="upload-hint">PDF, JPG, JPEG up to 10MB</div>
-              </div>
-            </el-upload>
-
-            <div v-if="uploadFile" class="file-preview">
-              <el-icon class="file-icon"><DocumentChecked /></el-icon>
-              <div class="file-details">
-                <div class="file-name">{{ uploadFile.name }}</div>
-                <div class="file-size">{{ (uploadFile.size / 1024).toFixed(2) }} KB</div>
-              </div>
-            </div>
-          </div>
+          <FileUploader
+            :upload-file="uploadFile"
+            :file-list="fileList"
+            @before-upload="beforeUpload"
+            @change="handleFileChange"
+            @remove="handleRemove"
+          />
         </div>
 
         <!-- Step 1: Edit Form -->
-        <div v-show="currentStep === 1" class="step-content form-step">
-          <div class="section-header-with-action">
-            <h2 class="section-title">Review & Edit Invoice Details</h2>
-            <el-button 
-              v-if="ocrFilename"
-              :icon="Download" 
-              type="success"
-              plain
-              @click="downloadJSON"
+        <div v-show="currentStep === 1" class="step-content">
+          <el-form ref="formRef" :model="invoiceForm" :rules="formRules" label-width="120px">
+            <InvoiceForm
+              v-model="invoiceForm"
+              :form-rules="formRules"
+              :calculated-subtotal="calculatedSubtotal"
+              :calculated-tax-amount="calculatedTaxAmount"
+              :calculated-total="calculatedTotal"
+              :extracted-total="extractedTotal"
+              :amount-mismatch="amountMismatch"
+              :ocr-filename="ocrFilename"
+              :unit-options="unitOptions"
+              @download-j-s-o-n="downloadJSON"
             >
-              Download JSON
-            </el-button>
-          </div>
-          
-          <el-form 
-            ref="formRef"
-            :model="invoiceForm" 
-            :rules="formRules"
-            label-width="120px" 
-            class="invoice-form"
-          >
-            <!-- Basic Info -->
-            <div class="form-section">
-              <h3 class="section-heading">Basic Information</h3>
-              <el-row :gutter="20">
-                <el-col :span="8">
-                  <el-form-item label="Invoice No." prop="invoice_info.invoice_number">
-                    <el-input v-model="invoiceForm.invoice_info.invoice_number" placeholder="INV-001" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="Issue Date" prop="invoice_info.issue_date">
-                    <el-input v-model="invoiceForm.invoice_info.issue_date" placeholder="2024-01-01" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="Due Date" prop="invoice_info.due_date">
-                    <el-input v-model="invoiceForm.invoice_info.due_date" placeholder="2024-01-31" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="Currency" prop="invoice_info.currency_code">
-                    <el-input v-model="invoiceForm.invoice_info.currency_code" placeholder="AUD" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="Buyer Ref." prop="invoice_info.buyer_reference">
-                    <el-input v-model="invoiceForm.invoice_info.buyer_reference" placeholder="N/A" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-            </div>
-
-            <!-- Supplier Info -->
-            <div class="form-section">
-              <h3 class="section-heading">Supplier Information</h3>
-              <div v-if="invoiceForm.supplier.raw_address" class="extracted-info">
-                <label class="extracted-label">Extracted Address:</label>
-                <div class="extracted-content">{{ invoiceForm.supplier.raw_address }}</div>
-              </div>
-              <el-row :gutter="20">
-                <el-col :span="12">
-                  <el-form-item label="Name" prop="supplier.name">
-                    <el-input v-model="invoiceForm.supplier.name" placeholder="Company Name" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="ABN" prop="supplier.abn">
-                    <el-input v-model="invoiceForm.supplier.abn" placeholder="12345678901" maxlength="11" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="24">
-                  <el-form-item label="Street Name" prop="supplier.street_name">
-                    <el-input v-model="invoiceForm.supplier.street_name" placeholder="123 Main Street" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="City" prop="supplier.city_name">
-                    <el-input v-model="invoiceForm.supplier.city_name" placeholder="Sydney" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="Postal Code" prop="supplier.postal_zone">
-                    <el-input v-model="invoiceForm.supplier.postal_zone" placeholder="2000" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-            </div>
-
-            <!-- Customer Info -->
-            <div class="form-section">
-              <h3 class="section-heading">Customer Information</h3>
-              <div v-if="invoiceForm.customer.raw_address" class="extracted-info">
-                <label class="extracted-label">Extracted Address:</label>
-                <div class="extracted-content">{{ invoiceForm.customer.raw_address }}</div>
-              </div>
-              <el-row :gutter="20">
-                <el-col :span="12">
-                  <el-form-item label="Name" prop="customer.name">
-                    <el-input v-model="invoiceForm.customer.name" placeholder="Customer Name" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="ABN" prop="customer.abn">
-                    <el-input v-model="invoiceForm.customer.abn" placeholder="12345678901" maxlength="11" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="24">
-                  <el-form-item label="Street Name" prop="customer.street_name">
-                    <el-input v-model="invoiceForm.customer.street_name" placeholder="456 Customer Road" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="City" prop="customer.city_name">
-                    <el-input v-model="invoiceForm.customer.city_name" placeholder="Melbourne" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="Postal Code" prop="customer.postal_zone">
-                    <el-input v-model="invoiceForm.customer.postal_zone" placeholder="3000" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-            </div>
-
-            <!-- Line Items -->
-            <div class="form-section">
-              <div class="section-header">
-                <h3 class="section-heading">Line Items</h3>
-                <el-button type="primary" :icon="Plus" size="small" @click="addLineItem">
-                  Add Item
-                </el-button>
-              </div>
-              
-              <div class="line-items-table">
-                <div 
-                  v-for="(item, index) in invoiceForm.line_items" 
-                  :key="index"
-                  class="line-item-row"
-                >
-                  <div class="row-header">
-                    <span class="item-num">#{{ index + 1 }}</span>
-                    <el-button 
-                      type="danger" 
-                      :icon="Delete" 
-                      size="small" 
-                      text
-                      @click="removeLineItem(index)"
-                    />
-                  </div>
-                  <el-row :gutter="16">
-                    <el-col :span="24">
-                      <el-form-item label="Name" required>
-                        <el-input v-model="item.name" placeholder="Product or service name" />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="6">
-                      <el-form-item label="Quantity" required>
-                        <el-input-number 
-                          v-model="item.quantity" 
-                          :min="0.01" 
-                          :precision="2"
-                          controls-position="right"
-                          style="width: 100%"
-                          @change="updateLineTotal(item)"
-                        />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="6">
-                      <el-form-item label="Unit" required>
-                        <el-select v-model="item.unit_code" style="width: 100%">
-                          <el-option 
-                            v-for="unit in unitOptions" 
-                            :key="unit"
-                            :label="unit"
-                            :value="unit"
-                          />
-                        </el-select>
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="6">
-                      <el-form-item label="Unit Price" required>
-                        <el-input-number 
-                          v-model="item.unit_price" 
-                          :min="0" 
-                          :precision="2"
-                          controls-position="right"
-                          style="width: 100%"
-                          @change="updateLineTotal(item)"
-                        />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="6">
-                      <el-form-item label="Line Total" required>
-                        <el-input-number 
-                          v-model="item.line_total" 
-                          :min="0" 
-                          :precision="2"
-                          controls-position="right"
-                          style="width: 100%"
-                        />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                      <el-form-item label="Tax %" required>
-                        <el-input-number 
-                          v-model="item.tax_percent" 
-                          :min="0" 
-                          :max="100"
-                          :precision="2"
-                          controls-position="right"
-                          placeholder="Enter tax percentage"
-                          style="width: 100%"
-                        />
-                      </el-form-item>
-                    </el-col>
-                  </el-row>
-                </div>
-              </div>
-            </div>
-
-            <!-- Summary -->
-            <div class="form-section summary-section">
-              <h3 class="section-heading">Summary</h3>
-              <div class="summary-info">
-                <div class="summary-row">
-                  <label>Subtotal (from line items):</label>
-                  <span class="amount">${{ calculatedSubtotal.toFixed(2) }}</span>
-                </div>
-                <div class="summary-row">
-                  <label>Tax (based on your tax %):</label>
-                  <span class="amount">${{ calculatedTaxAmount.toFixed(2) }}</span>
-                </div>
-                <div class="summary-row total-row">
-                  <label>Calculated Total:</label>
-                  <span class="amount">${{ calculatedTotal.toFixed(2) }}</span>
-                </div>
-                <div class="summary-row extracted-row">
-                  <label>Extracted Total (from OCR):</label>
-                  <span class="amount">${{ extractedTotal.toFixed(2) }}</span>
-                </div>
-              </div>
-              
-              <el-alert 
-                v-if="amountMismatch" 
-                type="warning" 
-                :closable="false"
-                show-icon
-                class="mismatch-alert"
-              >
-                The calculated total (${{ calculatedTotal.toFixed(2) }}) differs from the extracted total (${{ extractedTotal.toFixed(2) }}). 
-                Please verify the line items and tax percentages.
-              </el-alert>
-              <el-alert 
-                v-else
-                type="success" 
-                :closable="false"
-                show-icon
-                class="match-alert"
-              >
-                Amounts match! Ready to proceed.
-              </el-alert>
-            </div>
+              <template #line-items>
+                <LineItemsEditor
+                  :items="invoiceForm.line_items"
+                  :unit-options="unitOptions"
+                  @add="addLineItem"
+                  @remove="(index) => removeLineItem(index, ElMessage)"
+                  @update="updateLineTotal"
+                />
+              </template>
+            </InvoiceForm>
           </el-form>
         </div>
 
         <!-- Step 2: Generate & Validate XML -->
         <div v-show="currentStep === 2" class="step-content">
-          <h2 class="section-title">Generate & Validate XML</h2>
-          <p class="section-subtitle">Generate UBL-compliant XML and validate against AUNZ rules</p>
-          
-          <!-- 生成按钮 -->
-          <div v-if="!xmlContent" class="preview-action">
-            <el-button 
-              type="primary" 
-              size="large"
-              :loading="isProcessing"
-              @click="generateXML"
-            >
-              Generate XML
-            </el-button>
-          </div>
-
-          <!-- XML预览和验证结果 -->
-          <div v-else class="validation-area">
-            <!-- XML内容 -->
-            <div class="xml-viewer">
-              <div class="viewer-header">
-                <span class="viewer-title">Generated XML Content</span>
-                <el-button :icon="Download" size="small" @click="downloadXML">
-                  Download
-                </el-button>
-              </div>
-              <div class="viewer-content">
-                <pre>{{ xmlContent }}</pre>
-              </div>
-            </div>
-
-            <!-- 验证状态 -->
-            <div class="validation-status">
-              <div v-if="isValidating" class="validating">
-                <el-icon class="rotating"><Loading /></el-icon>
-                <span>Validating XML...</span>
-              </div>
-              
-              <div v-else-if="validationResult" class="validation-results">
-                <!-- 整体状态 -->
-                <el-alert 
-                  :type="validationResult.success ? 'success' : 'error'"
-                  :title="validationResult.success ? 'Validation Passed' : 'Validation Failed'"
-                  :closable="false"
-                  show-icon
-                  class="main-status"
-                >
-                  {{ validationResult.success ? 'All validation rules passed successfully!' : 'Some validation rules failed. Please check the details below.' }}
-                </el-alert>
-
-                <!-- 各规则详情 -->
-                <div class="rules-details">
-                  <div 
-                    v-for="(result, rule) in validationResult.results" 
-                    :key="rule"
-                    class="rule-card"
-                    :class="{ success: result.successful, error: !result.successful }"
-                  >
-                    <div class="rule-header">
-                      <span class="rule-name">{{ rule }}</span>
-                      <el-tag :type="result.successful ? 'success' : 'danger'" size="small">
-                        {{ result.successful ? 'PASSED' : 'FAILED' }}
-                      </el-tag>
-                    </div>
-                    <div class="rule-body">
-                      <p class="rule-message">{{ result.message }}</p>
-                      <div v-if="!result.successful && result.error" class="rule-error">
-                        <strong>Error:</strong> {{ result.error }}
-                      </div>
-                      <div v-if="result.assertion_errors_count > 0" class="rule-stats">
-                        <span>Assertion Errors: {{ result.assertion_errors_count }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-else class="no-validation">
-                <p>Generating XML and starting validation...</p>
-              </div>
-            </div>
-          </div>
+          <XmlValidator
+            :xml-content="xmlContent"
+            :xml-filename="xmlFilename"
+            :validation-result="validationResult"
+            :is-validating="isValidating"
+            @generate="handleGenerateXML"
+            @download="downloadXML"
+          />
         </div>
 
         <!-- Step 3: Send Email -->
         <div v-show="currentStep === 3" class="step-content">
           <div class="send-email-section">
             <h2 class="section-title">Send Invoice via Email</h2>
-            <p class="section-subtitle">Enter the recipient's email address to send the XML invoice</p>
+            <p class="section-subtitle">Enter the recipient's email address</p>
             
             <div class="xml-preview-compact">
               <div class="preview-header">
                 <span class="preview-title">{{ xmlFilename }}</span>
-                <el-button :icon="Download" size="small" @click="downloadXML">
-                  Download XML
-                </el-button>
+                <el-button size="small" @click="downloadXML">Download XML</el-button>
               </div>
             </div>
 
@@ -1087,6 +445,11 @@ const prevStep = () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.send-email-section {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
 .section-title {
   font-size: 1.5rem;
   font-weight: 600;
@@ -1100,364 +463,6 @@ const prevStep = () => {
   color: #9ca3af;
   text-align: center;
   margin-bottom: 2rem;
-}
-
-.section-header-with-action {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.section-header-with-action .section-title {
-  text-align: left;
-  margin: 0;
-}
-
-/* Upload */
-.upload-area {
-  max-width: 700px;
-  margin: 0 auto;
-}
-
-:deep(.uploader) { width: 100%; }
-
-:deep(.el-upload-dragger) {
-  background: rgba(16, 185, 129, 0.05);
-  border: 2px dashed rgba(16, 185, 129, 0.2);
-  border-radius: 12px;
-  padding: 3rem 2rem;
-  width: 100%;
-}
-
-:deep(.el-upload-dragger:hover) {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
-}
-
-.upload-icon {
-  font-size: 48px;
-  color: #10b981;
-  margin-bottom: 1rem;
-}
-
-.upload-title {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #ffffff;
-  margin-bottom: 0.5rem;
-}
-
-.upload-hint {
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
-.file-preview {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.file-icon { font-size: 32px; color: #10b981; }
-.file-details { flex: 1; }
-.file-name { font-size: 0.95rem; color: #ffffff; margin-bottom: 0.25rem; }
-.file-size { font-size: 0.85rem; color: #6b7280; }
-
-/* Form */
-.form-step { max-width: 100%; }
-.invoice-form { margin-top: 2rem; }
-
-.form-section {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.section-heading {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #10b981;
-  margin: 0 0 1.5rem 0;
-}
-
-.extracted-info {
-  margin-bottom: 1.5rem;
-  padding: 0.75rem;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 8px;
-}
-
-.extracted-label {
-  display: block;
-  font-size: 0.85rem;
-  color: #60a5fa;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.extracted-content {
-  color: #9ca3af;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: 'Courier New', monospace;
-}
-
-:deep(.el-form-item__label) { color: #9ca3af !important; font-weight: 500; }
-:deep(.el-form-item.is-error .el-input__wrapper) { box-shadow: 0 0 0 1px #f56c6c inset !important; }
-:deep(.el-form-item__error) { color: #f56c6c; }
-
-:deep(.el-input__wrapper) {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
-}
-
-:deep(.el-input__wrapper:hover),
-:deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #10b981 inset !important;
-}
-
-:deep(.el-input__inner) { color: #ffffff !important; }
-:deep(.el-input-number .el-input__wrapper) { background-color: rgba(255, 255, 255, 0.05) !important; }
-:deep(.el-select .el-input__wrapper) { background-color: rgba(255, 255, 255, 0.05) !important; }
-
-.line-items-table {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.line-item-row {
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.row-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.item-num {
-  font-weight: 600;
-  color: #10b981;
-  font-size: 0.9rem;
-}
-
-.summary-section {
-  background: rgba(16, 185, 129, 0.05);
-  border-color: rgba(16, 185, 129, 0.2);
-}
-
-.summary-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-}
-
-.summary-row label { color: #9ca3af; font-weight: 500; font-size: 0.95rem; }
-.summary-row .amount { color: #10b981; font-weight: 600; font-size: 1.2rem; }
-
-.summary-row.total-row {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.summary-row.total-row .amount { font-size: 1.4rem; }
-
-.summary-row.extracted-row {
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-}
-
-.summary-row.extracted-row .amount { color: #60a5fa; }
-
-.mismatch-alert,
-.match-alert { margin-top: 0; }
-
-/* Step 2: XML Validation */
-.preview-action {
-  display: flex;
-  justify-content: center;
-  margin-top: 3rem;
-}
-
-.validation-area {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.xml-viewer {
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.viewer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.viewer-title {
-  font-weight: 600;
-  color: #10b981;
-}
-
-.viewer-content {
-  padding: 1.5rem;
-  background: rgba(0, 0, 0, 0.3);
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.viewer-content pre {
-  color: #9ca3af;
-  font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  line-height: 1.5;
-}
-
-.validation-status {
-  margin-top: 1rem;
-}
-
-.validating {
-  text-align: center;
-  padding: 2rem;
-  color: #10b981;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.rotating {
-  font-size: 32px;
-  animation: rotate 1s linear infinite;
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.validation-results {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.main-status {
-  font-size: 1rem;
-}
-
-.rules-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
-}
-
-.rule-card {
-  padding: 1.25rem;
-  border-radius: 12px;
-  border: 1px solid;
-}
-
-.rule-card.success {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.3);
-}
-
-.rule-card.error {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.rule-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.rule-name {
-  font-weight: 600;
-  color: #ffffff;
-  font-size: 0.95rem;
-}
-
-.rule-body {
-  font-size: 0.9rem;
-}
-
-.rule-message {
-  color: #9ca3af;
-  margin: 0;
-  line-height: 1.5;
-}
-
-.rule-error {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-  color: #ef4444;
-  font-size: 0.85rem;
-}
-
-.rule-stats {
-  margin-top: 0.5rem;
-  color: #f59e0b;
-  font-size: 0.85rem;
-}
-
-.no-validation {
-  text-align: center;
-  padding: 2rem;
-  color: #6b7280;
-}
-
-/* Step 3 */
-.send-email-section {
-  max-width: 800px;
-  margin: 0 auto;
 }
 
 .xml-preview-compact {
@@ -1504,10 +509,6 @@ const prevStep = () => {
 
   .content-card {
     padding: 1.5rem;
-  }
-
-  .rules-details {
-    grid-template-columns: 1fr;
   }
 
   .actions {
