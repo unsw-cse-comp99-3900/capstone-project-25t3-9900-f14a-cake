@@ -10,6 +10,10 @@ UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
 ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg'}
 MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', '10'))
 
+# 文件清理配置
+FILE_MAX_AGE_MINUTES = int(os.getenv('FILE_MAX_AGE_MINUTES', '30'))
+FILE_CLEANUP_INTERVAL_MINUTES = int(os.getenv('FILE_CLEANUP_INTERVAL_MINUTES', '5'))
+
 # Veryfi API 凭证
 VERYFI_CLIENT_ID = os.getenv('VERYFI_CLIENT_ID')
 VERYFI_AUTHORIZATION = os.getenv('VERYFI_AUTHORIZATION')
