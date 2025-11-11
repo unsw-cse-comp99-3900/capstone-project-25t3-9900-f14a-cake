@@ -6,6 +6,8 @@ import config
 from routes.ocr_routes import ocr_bp
 from routes.xml_routes import xml_bp
 from routes.email_routes import email_bp
+from services.file_cleanup import start_cleanup_service, stop_cleanup_service
+import atexit
 
 app = Flask(__name__)
 CORS(app)
@@ -22,6 +24,16 @@ app.register_blueprint(ocr_bp, url_prefix='/api')
 app.register_blueprint(xml_bp, url_prefix='/api')
 app.register_blueprint(email_bp, url_prefix='/api')
 
+# 启动文件清理服务
+cleanup_service = start_cleanup_service(
+    upload_folder=config.UPLOAD_FOLDER,
+    max_age_minutes=config.FILE_MAX_AGE_MINUTES,
+    check_interval_minutes=config.FILE_CLEANUP_INTERVAL_MINUTES
+)
+
+# 应用关闭时停止清理服务
+atexit.register(stop_cleanup_service)
+
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -30,9 +42,24 @@ def health_check():
 
 
 if __name__ == '__main__':
+    print("\n" + "=" * 60)
+    print("E-Invoice API Server Starting...")
+    print("=" * 60)
+    print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
+    print(f"Allowed file types: {', '.join(sorted(config.ALLOWED_EXTENSIONS))}")
+    print(f"Max file size: {config.MAX_FILE_SIZE_MB}MB")
+    print(f"Veryfi CLIENT_ID: {'Configured' if config.VERYFI_CLIENT_ID else 'NOT CONFIGURED'}")
+    print(f"Veryfi AUTHORIZATION: {'Configured' if config.VERYFI_AUTHORIZATION else 'NOT CONFIGURED'}")
+    print(f"ESS Validator token: {'Configured' if config.ESS_VALIDATOR_TOKEN else 'NOT CONFIGURED'}")
+    
     # 显示配置警告
     for warning in config.check_config():
         print(warning)
     
     print("=" * 60 + "\n")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    try:
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
+        stop_cleanup_service()

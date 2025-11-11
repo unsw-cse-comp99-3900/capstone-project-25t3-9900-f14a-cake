@@ -2,10 +2,14 @@
 VERYFI_CLIENT_ID=your_client_id
 VERYFI_AUTHORIZATION=apikey your_username:your_api_key
 
-# ESS Validator Token
-ESS_VALIDATOR_TOKEN=your_ess_validator_token
+# ESS Validator Token (for XML validation)
+ESS_VALIDATOR_TOKEN=your_ess_validator_bearer_token
 
 # Upload Configuration
 UPLOAD_FOLDER=uploads
 MAX_FILE_SIZE_MB=10
+
+# File Cleanup Configuration (auto-delete old files)
+FILE_MAX_AGE_MINUTES=30
+FILE_CLEANUP_INTERVAL_MINUTES=5
 
