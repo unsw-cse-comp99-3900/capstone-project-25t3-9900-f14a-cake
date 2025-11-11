@@ -68,11 +68,20 @@ export function useXmlOperations() {
 
       if (!response.ok) {
         ElMessage.error(data.error || 'Failed to validate XML')
-        validationResult.value = { success: false, error: data.error }
+        validationResult.value = { success: false, error: data.error, details: data.details }
         return false
       }
 
       validationResult.value = data
+      
+      // 检查是否刷新了token
+      if (data.results && data.results.token_refreshed) {
+        ElMessage.info({
+          message: 'Authentication token was refreshed automatically and validation completed successfully.',
+          duration: 5000,
+          showClose: true
+        })
+      }
       
       if (data.success) {
         ElMessage.success('XML validation passed!')
@@ -98,14 +107,19 @@ export function useXmlOperations() {
       return
     }
     
-    const blob = new Blob([xmlContent.value], { type: 'application/xml' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = xmlFilename.value || 'invoice.xml'
-    a.click()
-    URL.revokeObjectURL(url)
-    ElMessage.success('XML downloaded!')
+    try {
+      const blob = new Blob([xmlContent.value], { type: 'application/xml' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = xmlFilename.value || 'invoice.xml'
+      a.click()
+      URL.revokeObjectURL(url)
+      ElMessage.success('XML downloaded!')
+    } catch (error) {
+      console.error('Download error:', error)
+      ElMessage.error('Failed to download XML file')
+    }
   }
 
   return {

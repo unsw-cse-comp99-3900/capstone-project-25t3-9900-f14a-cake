@@ -1,5 +1,6 @@
 <script setup>
 import { Download, Loading } from '@element-plus/icons-vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
 
 defineProps({
   xmlContent: String,
@@ -9,6 +10,45 @@ defineProps({
 })
 
 const emit = defineEmits(['download', 'generate'])
+
+const showResponseBody = (ruleName, responseBody) => {
+  const content = JSON.stringify(responseBody, null, 2)
+  
+  // 转义HTML以防止XSS
+  const escapedContent = content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+  
+  ElMessageBox.alert(
+    `<pre style="max-height: 500px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 1.5rem; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;">${escapedContent}</pre>`,
+    `${ruleName} - Validation Response Body`,
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: 'Close',
+      customClass: 'response-dialog'
+    }
+  )
+}
+
+const downloadResponseBody = (ruleName, responseBody) => {
+  try {
+    const content = JSON.stringify(responseBody, null, 2)
+    const blob = new Blob([content], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${ruleName}_validation_response.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('Response downloaded!')
+  } catch (error) {
+    console.error('Download error:', error)
+    ElMessage.error('Failed to download response')
+  }
+}
 </script>
 
 <template>
@@ -77,11 +117,39 @@ const emit = defineEmits(['download', 'generate'])
               </div>
               <div class="rule-body">
                 <p class="rule-message">{{ result.message }}</p>
+                
+                <!-- 错误信息 -->
                 <div v-if="!result.successful && result.error" class="rule-error">
                   <strong>Error:</strong> {{ result.error }}
                 </div>
-                <div v-if="result.assertion_errors_count > 0" class="rule-stats">
-                  <span>Assertion Errors: {{ result.assertion_errors_count }}</span>
+                
+                <!-- 统计信息 -->
+                <div v-if="result.assertion_errors_count !== undefined" class="rule-stats">
+                  <div v-if="result.assertion_errors_count > 0" class="error-count">
+                    <span>❌ Assertion Errors: {{ result.assertion_errors_count }}</span>
+                  </div>
+                  <div v-else class="success-count">
+                    <span>✓ No assertion errors</span>
+                  </div>
+                </div>
+                
+                <!-- 响应体查看和下载（所有规则都提供） -->
+                <div v-if="result.response_body" class="response-actions">
+                  <el-button 
+                    size="small" 
+                    plain
+                    @click="showResponseBody(rule, result.response_body)"
+                  >
+                    View Response
+                  </el-button>
+                  <el-button 
+                    size="small" 
+                    type="info"
+                    plain
+                    @click="downloadResponseBody(rule, result.response_body)"
+                  >
+                    Download JSON
+                  </el-button>
                 </div>
               </div>
             </div>
@@ -249,15 +317,43 @@ const emit = defineEmits(['download', 'generate'])
 }
 
 .rule-stats {
-  margin-top: 0.5rem;
-  color: #f59e0b;
+  margin-top: 0.75rem;
   font-size: 0.85rem;
+}
+
+.error-count {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.success-count {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.response-actions {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .no-validation {
   text-align: center;
   padding: 2rem;
   color: #6b7280;
+}
+
+:deep(.response-dialog) {
+  max-width: 800px;
+  width: 90%;
+}
+
+:deep(.response-dialog .el-message-box__message) {
+  max-height: 500px;
+  overflow-y: auto;
 }
 </style>
 

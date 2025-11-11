@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, current_app, send_file
 from services.xml_generator import generate_ubl_xml
 from services.xml_validator import validate_xml
+from services.token_manager import get_token_manager
 from datetime import datetime
 import os
 import config
@@ -47,7 +48,7 @@ def handle_generate_xml():
 
 @xml_bp.route('/validate-xml', methods=['POST'])
 def handle_validate_xml():
-    """验证XML发票（两个规则都要通过）"""
+    """验证XML发票（两个规则都要通过，支持自动token刷新）"""
     try:
         data = request.get_json()
         
@@ -56,15 +57,24 @@ def handle_validate_xml():
         
         xml_content = data['xml_content']
         
-        # 检查token
-        if not config.ESS_VALIDATOR_TOKEN:
-            return jsonify({
-                'error': 'ESS Validator token not configured',
-                'details': 'Please check your .env file'
-            }), 500
+        # 获取token manager
+        token_manager = get_token_manager()
         
-        # 调用验证服务
-        result = validate_xml(xml_content, config.ESS_VALIDATOR_TOKEN)
+        # 获取当前有效的token
+        try:
+            current_token = token_manager.get_token()
+        except Exception as e:
+            print(f"Failed to get token: {str(e)}")
+            # 如果自动获取失败，尝试使用环境变量中的token
+            current_token = config.ESS_VALIDATOR_TOKEN
+            if not current_token:
+                return jsonify({
+                    'error': 'ESS Validator token not available',
+                    'details': 'Failed to obtain authentication token. Please check your configuration.'
+                }), 500
+        
+        # 调用验证服务（传入token_manager以支持自动刷新）
+        result = validate_xml(xml_content, current_token, token_manager)
         
         return jsonify(result)
         
@@ -81,7 +91,10 @@ def handle_download_json(filename):
     try:
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         if not os.path.exists(file_path):
-            return jsonify({'error': 'File not found'}), 404
+            return jsonify({
+                'error': 'File not found',
+                'message': 'The file has been deleted (files are auto-deleted after 30 minutes). Please re-upload and process the document.'
+            }), 404
         
         return send_file(
             file_path,

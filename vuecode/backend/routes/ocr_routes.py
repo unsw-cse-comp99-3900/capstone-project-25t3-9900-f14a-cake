@@ -45,11 +45,14 @@ def handle_ocr():
         # 提取关键字段
         extracted_data = extract_invoice_fields(ocr_data)
         
+        import time
+        
         return jsonify({
             'success': True,
             'raw_data': ocr_data,
             'extracted': extracted_data,
             'json_filename': result_filename,
+            'file_created_at': int(time.time()),  # 文件创建时间戳（秒）
             'message': 'Document processed successfully'
         })
         
