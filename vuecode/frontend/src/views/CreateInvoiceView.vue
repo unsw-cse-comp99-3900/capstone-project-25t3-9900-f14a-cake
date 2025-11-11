@@ -1,21 +1,22 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, Download } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useInvoiceForm } from '@/composables/useInvoiceForm'
 import { useFileUpload } from '@/composables/useFileUpload'
 import { useXmlOperations } from '@/composables/useXmlOperations'
 import FileUploader from '@/components/FileUploader.vue'
-import InvoiceForm from '@/components/InvoiceForm.vue'
 import LineItemsEditor from '@/components/LineItemsEditor.vue'
 import XmlValidator from '@/components/XmlValidator.vue'
+import SessionWarning from '@/components/SessionWarning.vue'
 
 const router = useRouter()
 const currentStep = ref(0)
 const isProcessing = ref(false)
 const recipientEmail = ref('')
 const formRef = ref(null)
+const sessionWarningRef = ref(null)
 
 // 使用composables
 const {
@@ -65,9 +66,14 @@ const goBack = () => {
   router.push('/')
 }
 
-const handleOCRSuccess = (extracted) => {
+const handleOCRSuccess = (extracted, fileCreatedAt) => {
   invoiceForm.value = JSON.parse(JSON.stringify(extracted))
   currentStep.value = 1
+  
+  // 设置文件创建时间（用于准确计算剩余时间）
+  if (sessionWarningRef.value && fileCreatedAt) {
+    sessionWarningRef.value.setFileCreatedAt(fileCreatedAt)
+  }
 }
 
 const handleProcessOCR = async () => {
@@ -111,7 +117,15 @@ const sendEmail = async () => {
     const data = await response.json()
 
     if (!response.ok) {
-      ElMessage.error(data.error || 'Failed to send email')
+      if (response.status === 404) {
+        ElMessage.error({
+          message: data.message || 'XML file has been deleted (auto-deleted after 30 minutes). Please go back and regenerate the XML.',
+          duration: 6000,
+          showClose: true
+        })
+      } else {
+        ElMessage.error(data.error || 'Failed to send email')
+      }
       return
     }
 
@@ -135,17 +149,25 @@ const nextStep = async () => {
       return
     }
 
+    // 验证基础表单字段
     try {
       await formRef.value.validate()
-    } catch {
-      ElMessage.error('Please fill in all required fields correctly')
+    } catch (validationError) {
+      console.log('Form validation failed:', validationError)
+      ElMessage.error({
+        message: 'Please fill in all required fields correctly',
+        duration: 4000,
+        showClose: true
+      })
       return
     }
 
+    // 验证商品行
     if (!validateAllLineItems(ElMessage)) {
       return
     }
 
+    // 金额验证
     if (amountMismatch.value) {
       try {
         await ElMessageBox.confirm(
@@ -175,12 +197,22 @@ const nextStep = async () => {
 const prevStep = () => {
   if (currentStep.value > 0) {
     currentStep.value--
+    
+    // 如果返回到第二步，重置XML状态以允许重新生成
+    if (currentStep.value === 1) {
+      xmlContent.value = ''
+      xmlFilename.value = ''
+      validationResult.value = null
+    }
   }
 }
 </script>
 
 <template>
   <div class="create-page">
+    <!-- Session Warning -->
+    <SessionWarning ref="sessionWarningRef" />
+
     <header class="header">
       <div class="header-content">
         <h1 class="page-title">E-Invoice Creation</h1>
@@ -224,29 +256,180 @@ const prevStep = () => {
 
         <!-- Step 1: Edit Form -->
         <div v-show="currentStep === 1" class="step-content">
-          <el-form ref="formRef" :model="invoiceForm" :rules="formRules" label-width="120px">
-            <InvoiceForm
-              v-model="invoiceForm"
-              :form-rules="formRules"
-              :calculated-subtotal="calculatedSubtotal"
-              :calculated-tax-amount="calculatedTaxAmount"
-              :calculated-total="calculatedTotal"
-              :extracted-total="extractedTotal"
-              :amount-mismatch="amountMismatch"
-              :ocr-filename="ocrFilename"
-              :unit-options="unitOptions"
-              @download-j-s-o-n="downloadJSON"
+          <div class="section-header-with-action">
+            <h2 class="section-title">Review & Edit Invoice Details</h2>
+            <el-button 
+              v-if="ocrFilename"
+              type="success"
+              plain
+              @click="downloadJSON"
             >
-              <template #line-items>
-                <LineItemsEditor
-                  :items="invoiceForm.line_items"
-                  :unit-options="unitOptions"
-                  @add="addLineItem"
-                  @remove="(index) => removeLineItem(index, ElMessage)"
-                  @update="updateLineTotal"
-                />
-              </template>
-            </InvoiceForm>
+              Download JSON
+            </el-button>
+          </div>
+
+          <el-form 
+            ref="formRef" 
+            :model="invoiceForm" 
+            :rules="formRules" 
+            label-width="120px"
+            class="invoice-form"
+          >
+            <!-- Basic Info -->
+            <div class="form-section">
+              <h3 class="section-heading">Basic Information</h3>
+              <el-row :gutter="20">
+                <el-col :span="8">
+                  <el-form-item label="Invoice No." prop="invoice_info.invoice_number">
+                    <el-input v-model="invoiceForm.invoice_info.invoice_number" placeholder="INV-001" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="Issue Date" prop="invoice_info.issue_date">
+                    <el-input v-model="invoiceForm.invoice_info.issue_date" placeholder="2024-01-01" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="Due Date" prop="invoice_info.due_date">
+                    <el-input v-model="invoiceForm.invoice_info.due_date" placeholder="2024-01-31" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Currency" prop="invoice_info.currency_code">
+                    <el-input v-model="invoiceForm.invoice_info.currency_code" placeholder="AUD" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Buyer Ref." prop="invoice_info.buyer_reference">
+                    <el-input v-model="invoiceForm.invoice_info.buyer_reference" placeholder="N/A" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </div>
+
+            <!-- Supplier Info -->
+            <div class="form-section">
+              <h3 class="section-heading">Supplier Information</h3>
+              <div v-if="invoiceForm.supplier.raw_address" class="extracted-info">
+                <label class="extracted-label">Extracted Address:</label>
+                <div class="extracted-content">{{ invoiceForm.supplier.raw_address }}</div>
+              </div>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="Name" prop="supplier.name">
+                    <el-input v-model="invoiceForm.supplier.name" placeholder="Company Name" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="ABN" prop="supplier.abn">
+                    <el-input v-model="invoiceForm.supplier.abn" placeholder="12345678901" maxlength="11" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                  <el-form-item label="Street Name" prop="supplier.street_name">
+                    <el-input v-model="invoiceForm.supplier.street_name" placeholder="123 Main Street" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="City" prop="supplier.city_name">
+                    <el-input v-model="invoiceForm.supplier.city_name" placeholder="Sydney" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Postal Code" prop="supplier.postal_zone">
+                    <el-input v-model="invoiceForm.supplier.postal_zone" placeholder="2000" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </div>
+
+            <!-- Customer Info -->
+            <div class="form-section">
+              <h3 class="section-heading">Customer Information</h3>
+              <div v-if="invoiceForm.customer.raw_address" class="extracted-info">
+                <label class="extracted-label">Extracted Address:</label>
+                <div class="extracted-content">{{ invoiceForm.customer.raw_address }}</div>
+              </div>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="Name" prop="customer.name">
+                    <el-input v-model="invoiceForm.customer.name" placeholder="Customer Name" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="ABN" prop="customer.abn">
+                    <el-input v-model="invoiceForm.customer.abn" placeholder="12345678901" maxlength="11" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                  <el-form-item label="Street Name" prop="customer.street_name">
+                    <el-input v-model="invoiceForm.customer.street_name" placeholder="456 Customer Road" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="City" prop="customer.city_name">
+                    <el-input v-model="invoiceForm.customer.city_name" placeholder="Melbourne" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Postal Code" prop="customer.postal_zone">
+                    <el-input v-model="invoiceForm.customer.postal_zone" placeholder="3000" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </div>
+
+            <!-- Line Items -->
+            <LineItemsEditor
+              :items="invoiceForm.line_items"
+              :unit-options="unitOptions"
+              @add="addLineItem"
+              @remove="(index) => removeLineItem(index, ElMessage)"
+              @update="updateLineTotal"
+            />
+
+            <!-- Summary -->
+            <div class="form-section summary-section">
+              <h3 class="section-heading">Summary</h3>
+              <div class="summary-info">
+                <div class="summary-row">
+                  <label>Subtotal (from line items):</label>
+                  <span class="amount">${{ calculatedSubtotal.toFixed(2) }}</span>
+                </div>
+                <div class="summary-row">
+                  <label>Tax (based on your tax %):</label>
+                  <span class="amount">${{ calculatedTaxAmount.toFixed(2) }}</span>
+                </div>
+                <div class="summary-row total-row">
+                  <label>Calculated Total:</label>
+                  <span class="amount">${{ calculatedTotal.toFixed(2) }}</span>
+                </div>
+                <div class="summary-row extracted-row">
+                  <label>Extracted Total (from OCR):</label>
+                  <span class="amount">${{ extractedTotal.toFixed(2) }}</span>
+                </div>
+              </div>
+              
+              <el-alert 
+                v-if="amountMismatch" 
+                type="warning" 
+                :closable="false"
+                show-icon
+                class="mismatch-alert"
+              >
+                The calculated total (${{ calculatedTotal.toFixed(2) }}) differs from the extracted total (${{ extractedTotal.toFixed(2) }}). 
+                Please verify the line items and tax percentages.
+              </el-alert>
+              <el-alert 
+                v-else
+                type="success" 
+                :closable="false"
+                show-icon
+                class="match-alert"
+              >
+                Amounts match! Ready to proceed.
+              </el-alert>
+            </div>
           </el-form>
         </div>
 
@@ -361,6 +544,153 @@ const prevStep = () => {
   max-width: 1400px;
   margin: 0 auto;
   padding: 2.5rem 2rem;
+}
+
+.section-header-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.section-header-with-action .section-title {
+  text-align: left;
+  margin: 0;
+}
+
+.invoice-form {
+  margin-top: 2rem;
+}
+
+.form-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.section-heading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #10b981;
+  margin: 0 0 1.5rem 0;
+}
+
+.extracted-info {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+}
+
+.extracted-label {
+  display: block;
+  font-size: 0.85rem;
+  color: #60a5fa;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.extracted-content {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Courier New', monospace;
+}
+
+:deep(.el-form-item__label) { 
+  color: #9ca3af !important; 
+  font-weight: 500; 
+}
+
+:deep(.el-form-item.is-error .el-input__wrapper) { 
+  box-shadow: 0 0 0 1px #f56c6c inset !important; 
+}
+
+:deep(.el-form-item__error) { 
+  color: #f56c6c; 
+}
+
+:deep(.el-input__wrapper) {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+}
+
+:deep(.el-input__wrapper:hover),
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #10b981 inset !important;
+}
+
+:deep(.el-input__inner) { 
+  color: #ffffff !important; 
+}
+
+:deep(.el-input-number .el-input__wrapper) { 
+  background-color: rgba(255, 255, 255, 0.05) !important; 
+}
+
+:deep(.el-select .el-input__wrapper) { 
+  background-color: rgba(255, 255, 255, 0.05) !important; 
+}
+
+.summary-section {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.summary-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.summary-row label { 
+  color: #9ca3af; 
+  font-weight: 500; 
+  font-size: 0.95rem; 
+}
+
+.summary-row .amount { 
+  color: #10b981; 
+  font-weight: 600; 
+  font-size: 1.2rem; 
+}
+
+.summary-row.total-row {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.summary-row.total-row .amount { 
+  font-size: 1.4rem; 
+}
+
+.summary-row.extracted-row {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.summary-row.extracted-row .amount { 
+  color: #60a5fa; 
+}
+
+.mismatch-alert,
+.match-alert { 
+  margin-top: 0; 
 }
 
 .steps {

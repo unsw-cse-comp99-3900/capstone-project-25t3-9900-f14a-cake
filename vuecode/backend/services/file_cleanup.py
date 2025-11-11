@@ -68,8 +68,8 @@ class FileCleanupService:
         total_size = 0
         
         for filename in os.listdir(self.upload_folder):
-            # 跳过 .gitkeep 文件
-            if filename == '.gitkeep':
+            # 跳过特殊文件
+            if filename in ['.gitkeep', '.gitignore']:
                 continue
             
             file_path = os.path.join(self.upload_folder, filename)
@@ -88,13 +88,19 @@ class FileCleanupService:
                     os.remove(file_path)
                     deleted_count += 1
                     total_size += file_size
-                    print(f"Deleted old file: {filename} (age: {(now - file_mtime).total_seconds() / 60:.1f} min)")
+                    
+                    file_age_minutes = (now - file_mtime).total_seconds() / 60
+                    print(f"[Cleanup] Deleted: {filename} (age: {file_age_minutes:.1f} min, size: {file_size / 1024:.2f} KB)")
             
+            except PermissionError:
+                print(f"[Cleanup] Permission denied: {filename} (file may be in use)")
             except Exception as e:
-                print(f"Failed to delete {filename}: {str(e)}")
+                print(f"[Cleanup] Failed to delete {filename}: {str(e)}")
         
         if deleted_count > 0:
-            print(f"Cleanup completed: {deleted_count} file(s) deleted, {total_size / 1024:.2f} KB freed")
+            print(f"[Cleanup] Summary: {deleted_count} file(s) deleted, {total_size / 1024:.2f} KB freed")
+        else:
+            print(f"[Cleanup] No files to delete (checked {len(os.listdir(self.upload_folder))} items)")
     
     def cleanup_now(self):
         """立即执行清理（手动触发）"""

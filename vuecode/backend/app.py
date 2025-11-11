@@ -7,6 +7,7 @@ from routes.ocr_routes import ocr_bp
 from routes.xml_routes import xml_bp
 from routes.email_routes import email_bp
 from services.file_cleanup import start_cleanup_service, stop_cleanup_service
+from services.token_manager import get_token_manager
 import atexit
 
 app = Flask(__name__)
@@ -23,6 +24,9 @@ app.config['MAX_CONTENT_LENGTH'] = config.MAX_FILE_SIZE_MB * 1024 * 1024
 app.register_blueprint(ocr_bp, url_prefix='/api')
 app.register_blueprint(xml_bp, url_prefix='/api')
 app.register_blueprint(email_bp, url_prefix='/api')
+
+# 初始化token manager
+token_manager = get_token_manager()
 
 # 启动文件清理服务
 cleanup_service = start_cleanup_service(

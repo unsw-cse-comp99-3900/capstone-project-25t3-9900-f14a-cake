@@ -10,14 +10,19 @@ export function useFileUpload() {
   const beforeUpload = (file) => {
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg']
     const isAllowedType = allowedTypes.includes(file.type)
-    const isLt10M = file.size / 1024 / 1024 < 10
+    const fileSizeMB = file.size / 1024 / 1024
+    const isLt10M = fileSizeMB < 10
 
     if (!isAllowedType) {
       ElMessage.error('Only PDF, JPG, and JPEG files are supported!')
       return false
     }
     if (!isLt10M) {
-      ElMessage.error('File size cannot exceed 10MB!')
+      ElMessage.error({
+        message: `File size is ${fileSizeMB.toFixed(2)}MB, which exceeds the 10MB limit. Please upload a smaller file.`,
+        duration: 5000,
+        showClose: true
+      })
       return false
     }
     return true
@@ -68,7 +73,7 @@ export function useFileUpload() {
         ElMessage.success('Document processed successfully!')
         
         if (onSuccess) {
-          onSuccess(data.extracted)
+          onSuccess(data.extracted, data.file_created_at)
         }
         return true
       } else {
@@ -86,18 +91,41 @@ export function useFileUpload() {
     }
   }
 
-  const downloadJSON = () => {
+  const downloadJSON = async () => {
     if (!ocrFilename.value) {
       ElMessage.warning('No JSON file available')
       return
     }
     
-    const url = `/api/download-json/${ocrFilename.value}`
-    const a = document.createElement('a')
-    a.href = url
-    a.download = ocrFilename.value
-    a.click()
-    ElMessage.success('Downloading JSON file...')
+    try {
+      const response = await fetch(`/api/download-json/${ocrFilename.value}`)
+      
+      if (!response.ok) {
+        const data = await response.json()
+        if (response.status === 404) {
+          ElMessage.error({
+            message: data.message || 'File has been deleted (auto-deleted after 30 minutes). Please re-upload and process the document.',
+            duration: 6000,
+            showClose: true
+          })
+        } else {
+          ElMessage.error(data.error || 'Failed to download file')
+        }
+        return
+      }
+      
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = ocrFilename.value
+      a.click()
+      URL.revokeObjectURL(url)
+      ElMessage.success('JSON file downloaded!')
+    } catch (error) {
+      console.error('Download error:', error)
+      ElMessage.error('Failed to download file')
+    }
   }
 
   return {
