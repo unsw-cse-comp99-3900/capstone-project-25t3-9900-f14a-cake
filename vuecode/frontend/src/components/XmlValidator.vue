@@ -122,7 +122,7 @@ const downloadResponseBody = (ruleName, responseBody) => {
                   <div class="rule-body">
                     <!-- 成功状态 -->
                     <div v-if="result.successful" class="success-info">
-                      <p class="success-text">✓ {{ getReportSummary(result) }}</p>
+                      <p class="success-text">✓ Validation successful</p>
                     </div>
                 
                 <!-- 失败状态 -->
