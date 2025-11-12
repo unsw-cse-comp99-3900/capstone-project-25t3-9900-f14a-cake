@@ -7,7 +7,7 @@ load_dotenv()
 
 # 上传配置
 UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
-ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg'}
+ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', '10'))
 
 # 文件清理配置
