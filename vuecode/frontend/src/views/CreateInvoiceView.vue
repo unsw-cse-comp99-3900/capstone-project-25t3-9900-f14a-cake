@@ -172,6 +172,15 @@ const skipToManualEntry = () => {
   // 跳过上传，直接进入手动填写
   currentStep.value = 1
   
+  // 清除OCR相关状态
+  ocrFilename.value = ''
+  ocrResult.value = null
+  
+  // 重置会话计时器
+  if (sessionWarningRef.value) {
+    sessionWarningRef.value.reset()
+  }
+  
   // 使用默认空表单
   invoiceForm.value = {
     invoice_info: {

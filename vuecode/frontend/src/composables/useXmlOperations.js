@@ -1,9 +1,9 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
-export function useXmlOperations() {
-  const xmlContent = ref('')
-  const xmlFilename = ref('')
+export function useXmlOperations(initialXmlContent = '', initialXmlFilename = '') {
+  const xmlContent = ref(initialXmlContent)
+  const xmlFilename = ref(initialXmlFilename)
   const validationResult = ref(null)
   const isValidating = ref(false)
 

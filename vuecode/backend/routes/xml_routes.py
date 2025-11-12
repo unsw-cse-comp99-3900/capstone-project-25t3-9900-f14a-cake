@@ -4,10 +4,65 @@ from services.xml_generator import generate_ubl_xml
 from services.xml_validator import validate_xml
 from services.token_manager import get_token_manager
 from datetime import datetime
+from werkzeug.utils import secure_filename
 import os
 import config
 
 xml_bp = Blueprint('xml', __name__)
+
+
+@xml_bp.route('/upload-xml', methods=['POST'])
+def handle_upload_xml():
+    """上传XML文件用于验证"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # 检查文件类型
+        if not file.filename.lower().endswith('.xml'):
+            return jsonify({
+                'error': 'Invalid file type',
+                'message': 'Only XML files are supported for validation.'
+            }), 400
+        
+        # 读取XML内容
+        xml_content = file.read().decode('utf-8')
+        
+        # 保存文件（带时间戳）
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        base_name = os.path.splitext(filename)[0]
+        saved_filename = f"{base_name}_{timestamp}.xml"
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], saved_filename)
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(xml_content)
+        
+        print(f"SUCCESS: XML file uploaded: {saved_filename}")
+        
+        return jsonify({
+            'success': True,
+            'xml_content': xml_content,
+            'filename': saved_filename,
+            'file_created_at': int(datetime.now().timestamp()),
+            'message': 'XML file uploaded successfully'
+        })
+        
+    except UnicodeDecodeError:
+        return jsonify({
+            'error': 'Invalid XML file',
+            'message': 'The file cannot be decoded as UTF-8. Please ensure it is a valid XML file.'
+        }), 400
+    except Exception as e:
+        print(f"Error uploading XML: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 @xml_bp.route('/generate-xml', methods=['POST'])
@@ -105,4 +160,3 @@ def handle_download_json(filename):
     except Exception as e:
         print(f"Error downloading file: {str(e)}")
         return jsonify({'error': str(e)}), 500
-

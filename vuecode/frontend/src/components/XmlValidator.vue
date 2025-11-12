@@ -11,26 +11,30 @@ defineProps({
 
 const emit = defineEmits(['download', 'generate'])
 
-const showResponseBody = (ruleName, responseBody) => {
-  const content = JSON.stringify(responseBody, null, 2)
+const getAssertionErrors = (result) => {
+  // 从响应体中提取 firedAssertionErrors
+  if (!result.response_body) return []
   
-  // 转义HTML以防止XSS
-  const escapedContent = content
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
+  const reports = result.response_body.report?.reports
+  if (!reports) return []
   
-  ElMessageBox.alert(
-    `<pre style="max-height: 500px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 1.5rem; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;">${escapedContent}</pre>`,
-    `${ruleName} - Validation Response Body`,
-    {
-      dangerouslyUseHTMLString: true,
-      confirmButtonText: 'Close',
-      customClass: 'response-dialog'
+  // 查找对应规则的报告
+  for (const ruleName in reports) {
+    const ruleReport = reports[ruleName]
+    if (ruleReport.firedAssertionErrors && Array.isArray(ruleReport.firedAssertionErrors)) {
+      return ruleReport.firedAssertionErrors
     }
-  )
+  }
+  
+  return []
+}
+
+const getReportSummary = (result) => {
+  // 从响应体中提取 report.summary
+  if (!result.response_body) return result.message
+  
+  const summary = result.response_body.report?.summary
+  return summary || result.message
 }
 
 const downloadResponseBody = (ruleName, responseBody) => {
@@ -115,40 +119,48 @@ const downloadResponseBody = (ruleName, responseBody) => {
                   {{ result.successful ? 'PASSED' : 'FAILED' }}
                 </el-tag>
               </div>
-              <div class="rule-body">
-                <p class="rule-message">{{ result.message }}</p>
+                  <div class="rule-body">
+                    <!-- 成功状态 -->
+                    <div v-if="result.successful" class="success-info">
+                      <p class="success-text">✓ {{ getReportSummary(result) }}</p>
+                    </div>
                 
-                <!-- 错误信息 -->
-                <div v-if="!result.successful && result.error" class="rule-error">
-                  <strong>Error:</strong> {{ result.error }}
-                </div>
-                
-                <!-- 统计信息 -->
-                <div v-if="result.assertion_errors_count !== undefined" class="rule-stats">
-                  <div v-if="result.assertion_errors_count > 0" class="error-count">
-                    <span>❌ Assertion Errors: {{ result.assertion_errors_count }}</span>
-                  </div>
-                  <div v-else class="success-count">
-                    <span>✓ No assertion errors</span>
-                  </div>
-                </div>
-                
-                <!-- 响应体查看和下载（所有规则都提供） -->
-                <div v-if="result.response_body" class="response-actions">
-                  <el-button 
-                    size="small" 
-                    plain
-                    @click="showResponseBody(rule, result.response_body)"
+                <!-- 失败状态 -->
+                <div v-else class="error-info">
+                  <!-- 提取并显示assertion errors -->
+                  <div 
+                    v-if="getAssertionErrors(result).length > 0" 
+                    class="assertion-errors"
                   >
-                    View Response
-                  </el-button>
+                    <div class="error-header">
+                      <strong>Validation Errors ({{ getAssertionErrors(result).length }}):</strong>
+                    </div>
+                    <div 
+                      v-for="(error, index) in getAssertionErrors(result)" 
+                      :key="index"
+                      class="error-item"
+                    >
+                      <div class="error-id">{{ error.id }}</div>
+                      <div class="error-text">{{ error.text }}</div>
+                    </div>
+                  </div>
+                  
+                  <!-- 如果没有assertion errors，显示一般错误信息 -->
+                  <div v-else class="general-error">
+                    <p>{{ result.message }}</p>
+                    <p v-if="result.error" class="error-details">{{ result.error }}</p>
+                  </div>
+                </div>
+                
+                <!-- 下载完整响应体 -->
+                <div v-if="result.response_body" class="response-actions">
                   <el-button 
                     size="small" 
                     type="info"
                     plain
                     @click="downloadResponseBody(rule, result.response_body)"
                   >
-                    Download JSON
+                    Download Full Response (JSON)
                   </el-button>
                 </div>
               </div>
@@ -316,19 +328,79 @@ const downloadResponseBody = (ruleName, responseBody) => {
   font-size: 0.85rem;
 }
 
-.rule-stats {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
+.success-info {
+  padding: 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #10b981;
 }
 
-.error-count {
-  color: #f59e0b;
-  font-weight: 500;
-}
-
-.success-count {
+.success-text {
   color: #10b981;
-  font-weight: 500;
+  font-weight: 600;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.error-info {
+  margin-top: 0.5rem;
+}
+
+.assertion-errors {
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 3px solid #ef4444;
+}
+
+.error-header {
+  color: #ef4444;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.error-item {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+}
+
+.error-item:last-child {
+  margin-bottom: 0;
+}
+
+.error-id {
+  color: #f59e0b;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.error-text {
+  color: #ffffff;
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.general-error {
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #ef4444;
+}
+
+.general-error p {
+  color: #ef4444;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.error-details {
+  margin-top: 0.5rem;
+  color: #9ca3af !important;
+  font-size: 0.9rem;
 }
 
 .response-actions {
