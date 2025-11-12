@@ -45,6 +45,16 @@ def health_check():
     return jsonify({'status': 'ok', 'message': 'API is running'})
 
 
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """处理文件过大错误"""
+    return jsonify({
+        'error': 'File too large',
+        'message': f'File size exceeds the {config.MAX_FILE_SIZE_MB}MB limit. Please upload a smaller file.',
+        'max_size_mb': config.MAX_FILE_SIZE_MB
+    }), 413
+
+
 if __name__ == '__main__':
     print("\n" + "=" * 60)
     print("E-Invoice API Server Starting...")
