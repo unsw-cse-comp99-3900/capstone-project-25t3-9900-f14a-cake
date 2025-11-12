@@ -54,8 +54,19 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
     <div v-if="uploadFile" class="file-preview">
       <el-icon class="file-icon"><DocumentChecked /></el-icon>
       <div class="file-details">
-        <div class="file-name">{{ uploadFile.name }}</div>
-        <div class="file-size">{{ (uploadFile.size / 1024).toFixed(2) }} KB</div>
+        <div class="file-info">
+          <div class="file-name">{{ uploadFile.name }}</div>
+          <div class="file-size">{{ (uploadFile.size / 1024).toFixed(2) }} KB</div>
+        </div>
+        <el-button 
+          type="danger" 
+          circle
+          size="large"
+          class="remove-btn"
+          @click="emit('remove')"
+        >
+          <el-icon :size="18">✕</el-icon>
+        </el-button>
       </div>
     </div>
   </div>
@@ -133,6 +144,11 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
   background: rgba(16, 185, 129, 0.08);
 }
 
+/* 隐藏默认的文件列表 */
+:deep(.el-upload-list) {
+  display: none !important;
+}
+
 .upload-icon {
   font-size: 48px;
   color: #10b981;
@@ -153,19 +169,69 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
 
 .file-preview {
   margin-top: 1.5rem;
-  padding: 1rem;
+  padding: 1.25rem;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.file-preview:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.file-icon { 
+  font-size: 40px; 
+  color: #10b981; 
+  flex-shrink: 0;
+}
+
+.file-details { 
+  flex: 1; 
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 1rem;
 }
 
-.file-icon { font-size: 32px; color: #10b981; }
-.file-details { flex: 1; }
-.file-name { font-size: 0.95rem; color: #ffffff; margin-bottom: 0.25rem; }
-.file-size { font-size: 0.85rem; color: #6b7280; }
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name { 
+  font-size: 1rem; 
+  color: #ffffff; 
+  margin-bottom: 0.35rem;
+  font-weight: 500;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.file-size { 
+  font-size: 0.9rem; 
+  color: #9ca3af; 
+}
+
+.remove-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  transition: all 0.3s ease;
+}
+
+.remove-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  transform: scale(1.1);
+}
 
 @media (max-width: 768px) {
   .mode-selector {
