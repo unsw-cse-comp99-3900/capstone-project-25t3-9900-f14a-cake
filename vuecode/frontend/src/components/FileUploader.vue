@@ -12,7 +12,7 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
 <template>
   <div class="upload-area">
     <h2 class="section-title">Upload Invoice Document</h2>
-    <p class="section-subtitle">Upload a file to auto-extract information, or enter data manually</p>
+    <p class="section-subtitle">Upload a file to auto-extract information, or enter data manually (Supported: PDF, JPG, JPEG, PNG)</p>
     
     <div class="mode-selector">
       <div class="mode-option">
@@ -45,10 +45,10 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
       :limit="1"
     >
       <el-icon class="upload-icon"><Upload /></el-icon>
-      <div class="upload-text">
-        <div class="upload-title">Drop file here or click to upload</div>
-        <div class="upload-hint">PDF, JPG, JPEG up to 10MB</div>
-      </div>
+              <div class="upload-text">
+                <div class="upload-title">Drop file here or click to upload</div>
+                <div class="upload-hint">PDF, JPG, JPEG, PNG up to 10MB</div>
+              </div>
     </el-upload>
 
     <div v-if="uploadFile" class="file-preview">

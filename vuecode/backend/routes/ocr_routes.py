@@ -21,8 +21,24 @@ def handle_ocr():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
+        # 检查文件类型
         if not allowed_file(file.filename, config.ALLOWED_EXTENSIONS):
-            return jsonify({'error': 'File type not allowed. Only PDF, JPG, and JPEG are supported.'}), 400
+            return jsonify({
+                'error': 'File type not allowed',
+                'message': 'Only PDF, JPG, JPEG, and PNG files are supported.'
+            }), 400
+        
+        # 检查文件大小（在读取前）
+        file.seek(0, 2)  # 移动到文件末尾
+        file_size = file.tell()  # 获取文件大小（字节）
+        file.seek(0)  # 重置到文件开头
+        
+        file_size_mb = file_size / (1024 * 1024)
+        if file_size_mb > config.MAX_FILE_SIZE_MB:
+            return jsonify({
+                'error': 'File too large',
+                'message': f'File size is {file_size_mb:.2f}MB, which exceeds the {config.MAX_FILE_SIZE_MB}MB limit. Please upload a smaller file.'
+            }), 400
         
         # 检查凭证
         if not config.VERYFI_CLIENT_ID or not config.VERYFI_AUTHORIZATION:

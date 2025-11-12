@@ -8,13 +8,13 @@ export function useFileUpload() {
   const ocrFilename = ref('')
 
   const beforeUpload = (file) => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg']
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
     const isAllowedType = allowedTypes.includes(file.type)
     const fileSizeMB = file.size / 1024 / 1024
     const isLt10M = fileSizeMB < 10
 
     if (!isAllowedType) {
-      ElMessage.error('Only PDF, JPG, and JPEG files are supported!')
+      ElMessage.error('Only PDF, JPG, JPEG, and PNG files are supported!')
       return false
     }
     if (!isLt10M) {
@@ -56,21 +56,13 @@ export function useFileUpload() {
       const data = await response.json()
 
       if (!response.ok) {
-        // 特殊处理413错误（文件太大）
-        if (response.status === 413) {
-          ElMessage.error({
-            message: 'File size exceeds the 10MB limit. Please upload a smaller file.',
-            duration: 6000,
-            showClose: true
-          })
-          return false
-        }
-        
         const errorMsg = data.error || 'OCR processing failed'
-        const details = data.details ? `\n${data.details}` : ''
+        const details = data.message || (data.details ? data.details : '')
+        const fullMessage = details ? `${details}` : errorMsg
+        
         ElMessage.error({
-          message: errorMsg + details,
-          duration: 5000,
+          message: fullMessage,
+          duration: 6000,
           showClose: true
         })
         return false

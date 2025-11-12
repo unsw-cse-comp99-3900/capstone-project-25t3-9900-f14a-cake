@@ -362,7 +362,7 @@ const prevStep = () => {
                 </div>
                 <div class="rule-body">
                   <div v-if="result.successful" class="success-info">
-                    <p class="success-text">✓ {{ getReportSummary(result) }}</p>
+                    <p class="success-text">✓ Validation successful</p>
                   </div>
                   
                   <div v-else class="error-info">
