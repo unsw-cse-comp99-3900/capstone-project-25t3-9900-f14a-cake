@@ -27,6 +27,11 @@ if not VERYFI_AUTHORIZATION and _legacy_username and _legacy_api_key:
 # ESS Validator API 凭证
 ESS_VALIDATOR_TOKEN = os.getenv('ESS_VALIDATOR_TOKEN')
 
+# Mailgun 配置
+MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN')
+MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY')
+MAILGUN_FROM_EMAIL = os.getenv('MAILGUN_FROM_EMAIL', f'E-Invoice <noreply@{MAILGUN_DOMAIN}>')
+
 # 检查配置
 def check_config():
     """检查必要的配置是否存在"""
@@ -36,7 +41,10 @@ def check_config():
         warnings.append("WARNING: Veryfi API credentials are not fully configured in the .env file")
     
     if not ESS_VALIDATOR_TOKEN:
-        warnings.append("WARNING: ESS Validator token is missing in the .env file")
+        warnings.append("WARNING: ESS Validator token is missing (will be auto-generated)")
+    
+    if not all([MAILGUN_DOMAIN, MAILGUN_API_KEY]):
+        warnings.append("WARNING: Mailgun credentials are not configured (email sending will not work)")
     
     return warnings
 
