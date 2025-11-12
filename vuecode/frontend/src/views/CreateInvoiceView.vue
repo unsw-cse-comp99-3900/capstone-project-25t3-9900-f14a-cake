@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Download } from '@element-plus/icons-vue'
+import { ArrowLeft, Download, Loading } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useInvoiceForm } from '@/composables/useInvoiceForm'
 import { useFileUpload } from '@/composables/useFileUpload'
@@ -10,13 +10,15 @@ import FileUploader from '@/components/FileUploader.vue'
 import LineItemsEditor from '@/components/LineItemsEditor.vue'
 import XmlValidator from '@/components/XmlValidator.vue'
 import SessionWarning from '@/components/SessionWarning.vue'
+import EmailSender from '@/components/EmailSender.vue'
 
 const router = useRouter()
 const currentStep = ref(0)
 const isProcessing = ref(false)
-const recipientEmail = ref('')
+const emailSent = ref(false)
 const formRef = ref(null)
 const sessionWarningRef = ref(null)
+const emailSenderRef = ref(null)
 
 // 使用composables
 const {
@@ -89,8 +91,8 @@ const handleGenerateXML = async () => {
   isProcessing.value = false
 }
 
-const sendEmail = async () => {
-  if (!recipientEmail.value) {
+const sendEmail = async (email) => {
+  if (!email) {
     ElMessage.warning('Please enter an email address')
     return
   }
@@ -109,7 +111,7 @@ const sendEmail = async () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: recipientEmail.value,
+        email: email,
         xml_filename: xmlFilename.value
       }),
     })
@@ -119,24 +121,151 @@ const sendEmail = async () => {
     if (!response.ok) {
       if (response.status === 404) {
         ElMessage.error({
-          message: data.message || 'XML file has been deleted (auto-deleted after 30 minutes). Please go back and regenerate the XML.',
+          message: data.message || 'XML file has been deleted. Please go back and regenerate the XML.',
           duration: 6000,
           showClose: true
         })
+      } else if (data.error_info) {
+        // 显示Mailgun详细错误信息
+        ElMessageBox.alert(
+          `<div style="line-height: 1.6;">
+            <p><strong>${data.error_info.title}</strong></p>
+            <p style="margin: 1rem 0;">${data.error_info.message}</p>
+            <p style="color: #9ca3af; font-size: 0.9em;">${data.error_info.details}</p>
+          </div>`,
+          'Email Sending Failed',
+          {
+            dangerouslyUseHTMLString: true,
+            confirmButtonText: 'OK',
+            type: 'error'
+          }
+        )
       } else {
-        ElMessage.error(data.error || 'Failed to send email')
+        ElMessage.error({
+          message: data.message || data.error || 'Failed to send email',
+          duration: 5000,
+          showClose: true
+        })
       }
       return
     }
 
     if (data.success) {
-      ElMessage.success(data.message)
+      emailSent.value = true
+      // 标记第四步为完成
+      currentStep.value = 4
+      ElMessage.success({
+        message: data.message,
+        duration: 5000,
+        showClose: true
+      })
     }
   } catch (error) {
     console.error('Email Error:', error)
     ElMessage.error(`Failed to send email: ${error.message}`)
   } finally {
     isProcessing.value = false
+  }
+}
+
+const skipToManualEntry = () => {
+  // 跳过上传，直接进入手动填写
+  currentStep.value = 1
+  
+  // 使用默认空表单
+  invoiceForm.value = {
+    invoice_info: {
+      invoice_number: '',
+      issue_date: '',
+      due_date: '',
+      currency_code: 'AUD',
+      buyer_reference: 'N/A'
+    },
+    supplier: {
+      name: '',
+      street_name: '',
+      city_name: '',
+      postal_zone: '',
+      abn: '',
+      raw_address: ''
+    },
+    customer: {
+      name: '',
+      street_name: '',
+      city_name: '',
+      postal_zone: '',
+      abn: '',
+      raw_address: ''
+    },
+    line_items: [{
+      name: '',
+      quantity: 1,
+      unit_code: 'EA',
+      unit_price: 0,
+      line_total: 0,
+      tax_percent: null
+    }],
+    summary: {
+      subtotal: 0,
+      tax_amount: 0,
+      total: 0
+    }
+  }
+}
+
+const startOver = () => {
+  // 重置所有状态
+  currentStep.value = 0
+  uploadFile.value = null
+  fileList.value = []
+  xmlContent.value = ''
+  xmlFilename.value = ''
+  validationResult.value = null
+  emailSent.value = false
+  
+  // 重置表单
+  invoiceForm.value = {
+    invoice_info: {
+      invoice_number: '',
+      issue_date: '',
+      due_date: '',
+      currency_code: 'AUD',
+      buyer_reference: 'N/A'
+    },
+    supplier: {
+      name: '',
+      street_name: '',
+      city_name: '',
+      postal_zone: '',
+      abn: '',
+      raw_address: ''
+    },
+    customer: {
+      name: '',
+      street_name: '',
+      city_name: '',
+      postal_zone: '',
+      abn: '',
+      raw_address: ''
+    },
+    line_items: [{
+      name: '',
+      quantity: 1,
+      unit_code: 'EA',
+      unit_price: 0,
+      line_total: 0,
+      tax_percent: null
+    }],
+    summary: {
+      subtotal: 0,
+      tax_amount: 0,
+      total: 0
+    }
+  }
+  
+  // 重置会话计时器
+  if (sessionWarningRef.value) {
+    sessionWarningRef.value.reset()
   }
 }
 
@@ -251,6 +380,7 @@ const prevStep = () => {
             @before-upload="beforeUpload"
             @change="handleFileChange"
             @remove="handleRemove"
+            @skip-to-manual="skipToManualEntry"
           />
         </div>
 
@@ -446,47 +576,21 @@ const prevStep = () => {
         </div>
 
         <!-- Step 3: Send Email -->
-        <div v-show="currentStep === 3" class="step-content">
-          <div class="send-email-section">
-            <h2 class="section-title">Send Invoice via Email</h2>
-            <p class="section-subtitle">Enter the recipient's email address</p>
-            
-            <div class="xml-preview-compact">
-              <div class="preview-header">
-                <span class="preview-title">{{ xmlFilename }}</span>
-                <el-button size="small" @click="downloadXML">Download XML</el-button>
-              </div>
-            </div>
-
-            <div class="email-form">
-              <el-form label-width="120px">
-                <el-form-item label="Recipient Email">
-                  <el-input 
-                    v-model="recipientEmail" 
-                    placeholder="example@email.com"
-                    type="email"
-                    size="large"
-                  />
-                </el-form-item>
-                <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    :loading="isProcessing"
-                    :disabled="!recipientEmail"
-                    @click="sendEmail"
-                  >
-                    Send Invoice
-                  </el-button>
-                </el-form-item>
-              </el-form>
-            </div>
-          </div>
+        <div v-show="currentStep === 3 || currentStep === 4" class="step-content">
+          <EmailSender
+            ref="emailSenderRef"
+            :xml-filename="xmlFilename"
+            :email-sent="emailSent"
+            :is-loading="isProcessing"
+            @download="downloadXML"
+            @send="sendEmail"
+            @start-over="startOver"
+          />
         </div>
       </div>
 
       <!-- Actions -->
-      <div class="actions">
+      <div v-if="!emailSent" class="actions">
         <el-button 
           v-if="currentStep > 0 && currentStep < 3"
           size="large" 
@@ -513,12 +617,18 @@ const prevStep = () => {
 .create-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+  padding-top: 0;
 }
 
 .header {
-  background: rgba(255, 255, 255, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(15, 20, 25, 0.95);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding: 1.25rem 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .header-content {
@@ -695,18 +805,21 @@ const prevStep = () => {
 
 .steps {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   margin-bottom: 2.5rem;
-  gap: 1rem;
+  gap: 2rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .step {
-  flex: 1;
   display: flex;
   gap: 0.75rem;
   align-items: flex-start;
   opacity: 0.5;
   transition: opacity 0.3s ease;
+  min-width: 250px;
 }
 
 .step.active,
