@@ -13,3 +13,8 @@ MAX_FILE_SIZE_MB=10
 FILE_MAX_AGE_MINUTES=30
 FILE_CLEANUP_INTERVAL_MINUTES=5
 
+# Mailgun Configuration (for sending emails)
+MAILGUN_DOMAIN=your_mailgun_domain
+MAILGUN_API_KEY=your_mailgun_api_key
+MAILGUN_FROM_EMAIL=noreply@your_domain.com
+
