@@ -2,37 +2,37 @@
 import os
 from dotenv import load_dotenv
 
-# 加载环境变量
+# load env
 load_dotenv()
 
-# 上传配置
+# upload config
 UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
 ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', '10'))
 
-# 文件清理配置
+# file config
 FILE_MAX_AGE_MINUTES = int(os.getenv('FILE_MAX_AGE_MINUTES', '30'))
 FILE_CLEANUP_INTERVAL_MINUTES = int(os.getenv('FILE_CLEANUP_INTERVAL_MINUTES', '5'))
 
-# Veryfi API 凭证
+# Veryfi API 
 VERYFI_CLIENT_ID = os.getenv('VERYFI_CLIENT_ID')
 VERYFI_AUTHORIZATION = os.getenv('VERYFI_AUTHORIZATION')
 
-# 兼容旧配置
+
 _legacy_username = os.getenv('VERYFI_USERNAME')
 _legacy_api_key = os.getenv('VERYFI_API_KEY')
 if not VERYFI_AUTHORIZATION and _legacy_username and _legacy_api_key:
     VERYFI_AUTHORIZATION = f"apikey {_legacy_username}:{_legacy_api_key}"
 
-# ESS Validator API 凭证
+# ESS Validator API 
 ESS_VALIDATOR_TOKEN = os.getenv('ESS_VALIDATOR_TOKEN')
 
-# Mailgun 配置
+# Mailgun config
 MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN')
 MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY')
 MAILGUN_FROM_EMAIL = os.getenv('MAILGUN_FROM_EMAIL', f'E-Invoice <noreply@{MAILGUN_DOMAIN}>')
 
-# 检查配置
+# check config
 def check_config():
     """检查必要的配置是否存在"""
     warnings = []
