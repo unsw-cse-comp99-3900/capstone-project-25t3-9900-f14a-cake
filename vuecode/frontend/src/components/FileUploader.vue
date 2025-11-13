@@ -87,8 +87,8 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
 }
 
 .section-subtitle {
-  font-size: 0.95rem;
-  color: #9ca3af;
+  font-size: 1.05rem;
+  color: #d1d5db;
   text-align: center;
   margin-bottom: 2.5rem;
 }
@@ -117,15 +117,15 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
 }
 
 .mode-option p {
-  font-size: 0.9rem;
-  color: #9ca3af;
+  font-size: 1rem;
+  color: #cfd8dc;
   margin-bottom: 1rem;
 }
 
 .mode-divider {
   font-size: 1rem;
   font-weight: 600;
-  color: #6b7280;
+  color: #cbd5e1;
   padding: 0 1rem;
 }
 
@@ -163,8 +163,8 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
 }
 
 .upload-hint {
-  font-size: 0.9rem;
-  color: #6b7280;
+  font-size: 1rem;
+  color: #cbd5e1;
 }
 
 .file-preview {
@@ -213,8 +213,8 @@ const emit = defineEmits(['before-upload', 'change', 'remove', 'skip-to-manual']
 }
 
 .file-size { 
-  font-size: 0.9rem; 
-  color: #9ca3af; 
+  font-size: 1rem; 
+  color: #d1d5db; 
 }
 
 .remove-btn {
