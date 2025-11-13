@@ -13,6 +13,44 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['add', 'remove', 'update'])
+
+// 完整的单位列表（代码 + 英文全称）
+const unitList = [
+  { code: 'EA', name: 'Each', label: 'EA (Each)' },
+  { code: 'HUR', name: 'Hour', label: 'HUR (Hour)' },
+  { code: 'DAY', name: 'Day', label: 'DAY (Day)' },
+  { code: 'MON', name: 'Month', label: 'MON (Month)' },
+  { code: 'ANN', name: 'Year', label: 'ANN (Year)' },
+  { code: 'KGM', name: 'Kilogram', label: 'KGM (Kilogram)' },
+  { code: 'GRM', name: 'Gram', label: 'GRM (Gram)' },
+  { code: 'LTR', name: 'Litre', label: 'LTR (Litre)' },
+  { code: 'MLT', name: 'Millilitre', label: 'MLT (Millilitre)' },
+  { code: 'MTR', name: 'Metre', label: 'MTR (Metre)' },
+  { code: 'CMT', name: 'Centimetre', label: 'CMT (Centimetre)' },
+  { code: 'MMT', name: 'Millimetre', label: 'MMT (Millimetre)' },
+  { code: 'KMT', name: 'Kilometre', label: 'KMT (Kilometre)' },
+  { code: 'M2', name: 'Square metre', label: 'M2 (Square metre)' },
+  { code: 'M3', name: 'Cubic metre', label: 'M3 (Cubic metre)' },
+  { code: 'TNE', name: 'Tonne (metric ton)', label: 'TNE (Tonne)' },
+  { code: 'NAR', name: 'Number of articles', label: 'NAR (Number of articles)' },
+  { code: 'SET', name: 'Set', label: 'SET (Set)' },
+  { code: 'PK', name: 'Package', label: 'PK (Package)' },
+  { code: 'PRS', name: 'Pairs', label: 'PRS (Pairs)' },
+  { code: 'BOX', name: 'Box', label: 'BOX (Box)' },
+  { code: 'ROL', name: 'Roll', label: 'ROL (Roll)' },
+  { code: 'BAG', name: 'Bag', label: 'BAG (Bag)' },
+  { code: 'PAL', name: 'Pallet', label: 'PAL (Pallet)' },
+  { code: 'CMK', name: 'Square centimetre', label: 'CMK (Square centimetre)' },
+  { code: 'MMK', name: 'Square millimetre', label: 'MMK (Square millimetre)' },
+  { code: 'MIN', name: 'Minute', label: 'MIN (Minute)' },
+  { code: 'SEC', name: 'Second', label: 'SEC (Second)' },
+  { code: 'WEE', name: 'Week', label: 'WEE (Week)' },
+  { code: 'C62', name: 'One (count)', label: 'C62 (One)' },
+  { code: 'E48', name: 'Working day', label: 'E48 (Working day)' },
+  { code: 'PR', name: 'Pair', label: 'PR (Pair)' },
+  { code: 'CCT', name: 'Carat (metric)', label: 'CCT (Carat)' },
+  { code: 'DZN', name: 'Dozen', label: 'DZN (Dozen)' }
+]
 </script>
 
 <template>
@@ -60,12 +98,12 @@ const emit = defineEmits(['add', 'remove', 'update'])
           </el-col>
           <el-col :span="6">
             <el-form-item label="Unit" required>
-              <el-select v-model="item.unit_code" style="width: 100%">
+              <el-select v-model="item.unit_code" style="width: 100%" filterable>
                 <el-option 
-                  v-for="unit in unitOptions" 
-                  :key="unit"
-                  :label="unit"
-                  :value="unit"
+                  v-for="unit in unitList" 
+                  :key="unit.code"
+                  :label="unit.label"
+                  :value="unit.code"
                 />
               </el-select>
             </el-form-item>
