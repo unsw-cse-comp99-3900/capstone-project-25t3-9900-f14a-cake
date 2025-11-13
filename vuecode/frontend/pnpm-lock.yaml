@@ -11,6 +11,9 @@ importers:
       '@element-plus/icons-vue':
         specifier: ^2.3.2
         version: 2.3.2(vue@3.5.22)
+      address-parser:
+        specifier: ^0.2.2
+        version: 0.2.2
       axios:
         specifier: ^1.13.1
         version: 1.13.1
@@ -679,6 +682,9 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  address-parser@0.2.2:
+    resolution: {integrity: sha512-E8o6g/Bm6i2DDIWsOh37bHYNwAvRPlUUPJEEpOBjXIuE/aaydFKmdIyYdtYEWpLnWfxWoo/VXdHvTzM69wpvhA==}
+
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
 
@@ -1185,6 +1191,9 @@ packages:
 
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
+
+  number2word@0.2.0:
+    resolution: {integrity: sha512-1QfmDjHHyaDl2ifFf1lsOICZeEpCOetozL042Y2s3xYnKfqTD+eeLVndDPANzKA/pxSgqRDzNzuYDQY68IZ9yA==}
 
   ohash@2.0.11:
     resolution: {integrity: sha512-RdR9FQrFwNBNXAr4GixM8YaRZRJ5PUWbKYbE5eOsrwAjJW0q2REGcf79oYPsLyskQCZG1PLN+S/K1V00joZAoQ==}
@@ -2103,6 +2112,10 @@ snapshots:
 
   acorn@8.15.0: {}
 
+  address-parser@0.2.2:
+    dependencies:
+      number2word: 0.2.0
+
   ajv@6.12.6:
     dependencies:
       fast-deep-equal: 3.1.3
@@ -2586,6 +2599,8 @@ snapshots:
   nth-check@2.1.1:
     dependencies:
       boolbase: 1.0.0
+
+  number2word@0.2.0: {}
 
   ohash@2.0.11: {}
 
