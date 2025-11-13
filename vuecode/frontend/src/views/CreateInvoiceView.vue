@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Download, Loading } from '@element-plus/icons-vue'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useInvoiceForm } from '@/composables/useInvoiceForm'
 import { useFileUpload } from '@/composables/useFileUpload'
@@ -692,7 +692,24 @@ const prevStep = () => {
 }
 
 .back-btn {
-  color: #f1f5fb !important;
+  color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.back-btn:hover {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+  border-color: #10b981 !important;
+}
+
+.back-btn:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.5);
+  outline-offset: 2px;
 }
 
 .main-content {
@@ -882,7 +899,7 @@ const prevStep = () => {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  color: #6b7280;
+  color: #cbd5e1;
   transition: all 0.3s ease;
   flex-shrink: 0;
 }
@@ -905,15 +922,15 @@ const prevStep = () => {
 }
 
 .step-title {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: #ffffff;
   margin-bottom: 0.25rem;
 }
 
 .step-desc {
-  font-size: 0.8rem;
-  color: #6b7280;
+  font-size: 0.95rem;
+  color: #cbd5e1;
 }
 
 .content-card {
@@ -947,8 +964,8 @@ const prevStep = () => {
 }
 
 .section-subtitle {
-  font-size: 0.95rem;
-  color: #9ca3af;
+  font-size: 1.05rem;
+  color: #d1d5db;
   text-align: center;
   margin-bottom: 2rem;
 }

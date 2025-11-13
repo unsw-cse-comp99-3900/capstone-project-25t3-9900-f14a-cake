@@ -476,7 +476,24 @@ const prevStep = () => {
 }
 
 .back-btn {
-  color: #f1f5fb !important;
+  color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.back-btn:hover {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+  border-color: #10b981 !important;
+}
+
+.back-btn:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.5);
+  outline-offset: 2px;
 }
 
 .main-content {
@@ -650,7 +667,7 @@ const prevStep = () => {
 }
 
 .rule-body {
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .success-info {
@@ -706,7 +723,7 @@ const prevStep = () => {
 .error-text {
   color: #ffffff;
   line-height: 1.6;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .general-error {
@@ -724,8 +741,8 @@ const prevStep = () => {
 
 .error-details {
   margin-top: 0.5rem;
-  color: #9ca3af !important;
-  font-size: 0.9rem;
+  color: #d1d5db !important;
+  font-size: 1rem;
 }
 
 .response-actions {

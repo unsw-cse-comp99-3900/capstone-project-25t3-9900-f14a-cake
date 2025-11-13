@@ -68,8 +68,8 @@ const emit = defineEmits(['before-upload', 'change', 'remove'])
 }
 
 .section-subtitle {
-  font-size: 0.95rem;
-  color: #9ca3af;
+  font-size: 1.05rem;
+  color: #d1d5db;
   text-align: center;
   margin-bottom: 2.5rem;
 }
@@ -108,8 +108,8 @@ const emit = defineEmits(['before-upload', 'change', 'remove'])
 }
 
 .upload-hint {
-  font-size: 0.9rem;
-  color: #6b7280;
+  font-size: 1rem;
+  color: #cbd5e1;
 }
 
 .file-preview {
@@ -158,8 +158,8 @@ const emit = defineEmits(['before-upload', 'change', 'remove'])
 }
 
 .file-size { 
-  font-size: 0.9rem; 
-  color: #9ca3af; 
+  font-size: 1rem; 
+  color: #d1d5db; 
 }
 
 .remove-btn {

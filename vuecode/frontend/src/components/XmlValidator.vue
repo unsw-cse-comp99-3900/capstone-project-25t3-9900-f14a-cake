@@ -186,8 +186,8 @@ const downloadResponseBody = (ruleName, responseBody) => {
 }
 
 .section-subtitle {
-  font-size: 0.95rem;
-  color: #9ca3af;
+  font-size: 1.05rem;
+  color: #d1d5db;
   text-align: center;
   margin-bottom: 2rem;
 }
@@ -231,9 +231,9 @@ const downloadResponseBody = (ruleName, responseBody) => {
 }
 
 .viewer-content pre {
-  color: #9ca3af;
+  color: #d1d5db;
   font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -310,11 +310,11 @@ const downloadResponseBody = (ruleName, responseBody) => {
 }
 
 .rule-body {
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .rule-message {
-  color: #9ca3af;
+  color: #d1d5db;
   margin: 0;
   line-height: 1.5;
 }
@@ -381,7 +381,7 @@ const downloadResponseBody = (ruleName, responseBody) => {
 .error-text {
   color: #ffffff;
   line-height: 1.6;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .general-error {
@@ -399,8 +399,8 @@ const downloadResponseBody = (ruleName, responseBody) => {
 
 .error-details {
   margin-top: 0.5rem;
-  color: #9ca3af !important;
-  font-size: 0.9rem;
+  color: #d1d5db !important;
+  font-size: 1rem;
 }
 
 .response-actions {
@@ -415,7 +415,7 @@ const downloadResponseBody = (ruleName, responseBody) => {
 .no-validation {
   text-align: center;
   padding: 2rem;
-  color: #6b7280;
+  color: #cbd5e1;
 }
 
 :deep(.response-dialog) {
