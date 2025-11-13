@@ -21,14 +21,14 @@ def handle_ocr():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
-        # 检查文件类型
+        # 首先检查文件类型（在读取文件内容之前）
         if not allowed_file(file.filename, config.ALLOWED_EXTENSIONS):
             return jsonify({
                 'error': 'File type not allowed',
                 'message': 'Only PDF, JPG, JPEG, and PNG files are supported.'
             }), 400
         
-        # 检查文件大小（在读取前）
+        # 然后检查文件大小（在读取前）
         file.seek(0, 2)  # 移动到文件末尾
         file_size = file.tell()  # 获取文件大小（字节）
         file.seek(0)  # 重置到文件开头
