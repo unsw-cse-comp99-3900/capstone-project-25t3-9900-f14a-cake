@@ -149,8 +149,8 @@ const goTo = (route) => {
 }
 
 .feature-desc {
-  font-size: 0.95rem;
-  color: #9ca3af;
+  font-size: 1.05rem;
+  color: #d1d5db;
   line-height: 1.5;
   margin-bottom: 1.5rem;
   flex: 1;
