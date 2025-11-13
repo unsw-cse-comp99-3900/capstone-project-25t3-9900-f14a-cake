@@ -139,8 +139,8 @@ defineExpose({
 }
 
 .section-subtitle {
-  font-size: 0.95rem;
-  color: #9ca3af;
+  font-size: 1.05rem;
+  color: #d1d5db;
   text-align: center;
   margin-bottom: 2rem;
 }
@@ -170,7 +170,7 @@ defineExpose({
 }
 
 :deep(.el-form-item__label) {
-  color: #9ca3af !important;
+  color: #d1d5db !important;
   font-weight: 500;
 }
 
@@ -223,7 +223,7 @@ defineExpose({
 
 .success-message {
   font-size: 1.1rem;
-  color: #9ca3af;
+  color: #d1d5db;
   margin-bottom: 2.5rem;
   line-height: 1.6;
 }
