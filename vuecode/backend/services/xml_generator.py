@@ -3,6 +3,22 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 
+def escape_xml_text(text):
+    """转义XML特殊字符，防止破坏XML结构"""
+    if not text:
+        return text
+    
+    # XML实体转义
+    text = str(text)
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;')
+    text = text.replace('>', '&gt;')
+    text = text.replace('"', '&quot;')
+    text = text.replace("'", '&apos;')
+    
+    return text
+
+
 def generate_ubl_xml(data):
     """生成UBL格式的XML"""
     # 命名空间
@@ -27,12 +43,12 @@ def generate_ubl_xml(data):
     
     # 基本信息
     info = data.get('invoice_info', {})
-    ET.SubElement(invoice, cbc + 'ID').text = info.get('invoice_number', 'INV-000')
-    ET.SubElement(invoice, cbc + 'IssueDate').text = info.get('issue_date', '')
-    ET.SubElement(invoice, cbc + 'DueDate').text = info.get('due_date', '')
+    ET.SubElement(invoice, cbc + 'ID').text = escape_xml_text(info.get('invoice_number', 'INV-000'))
+    ET.SubElement(invoice, cbc + 'IssueDate').text = escape_xml_text(info.get('issue_date', ''))
+    ET.SubElement(invoice, cbc + 'DueDate').text = escape_xml_text(info.get('due_date', ''))
     ET.SubElement(invoice, cbc + 'InvoiceTypeCode').text = '380'
-    ET.SubElement(invoice, cbc + 'DocumentCurrencyCode').text = info.get('currency_code', 'AUD')
-    ET.SubElement(invoice, cbc + 'BuyerReference').text = info.get('buyer_reference', 'N/A')
+    ET.SubElement(invoice, cbc + 'DocumentCurrencyCode').text = escape_xml_text(info.get('currency_code', 'AUD'))
+    ET.SubElement(invoice, cbc + 'BuyerReference').text = escape_xml_text(info.get('buyer_reference', 'N/A'))
     
     # 供应商信息
     supplier = data.get('supplier', {})
@@ -40,21 +56,21 @@ def generate_ubl_xml(data):
     supplier_party_elem = ET.SubElement(supplier_party, cac + 'Party')
     
     supplier_abn = supplier.get('abn', '').replace(' ', '')
-    ET.SubElement(supplier_party_elem, cbc + 'EndpointID', schemeID='0151').text = supplier_abn
+    ET.SubElement(supplier_party_elem, cbc + 'EndpointID', schemeID='0151').text = escape_xml_text(supplier_abn)
     
     supplier_name_elem = ET.SubElement(supplier_party_elem, cac + 'PartyName')
-    ET.SubElement(supplier_name_elem, cbc + 'Name').text = supplier.get('name', '')
+    ET.SubElement(supplier_name_elem, cbc + 'Name').text = escape_xml_text(supplier.get('name', ''))
     
     supplier_address = ET.SubElement(supplier_party_elem, cac + 'PostalAddress')
-    ET.SubElement(supplier_address, cbc + 'StreetName').text = supplier.get('street_name', '')
-    ET.SubElement(supplier_address, cbc + 'CityName').text = supplier.get('city_name', '')
-    ET.SubElement(supplier_address, cbc + 'PostalZone').text = supplier.get('postal_zone', '')
+    ET.SubElement(supplier_address, cbc + 'StreetName').text = escape_xml_text(supplier.get('street_name', ''))
+    ET.SubElement(supplier_address, cbc + 'CityName').text = escape_xml_text(supplier.get('city_name', ''))
+    ET.SubElement(supplier_address, cbc + 'PostalZone').text = escape_xml_text(supplier.get('postal_zone', ''))
     supplier_country = ET.SubElement(supplier_address, cac + 'Country')
     ET.SubElement(supplier_country, cbc + 'IdentificationCode').text = 'AU'
     
     supplier_legal = ET.SubElement(supplier_party_elem, cac + 'PartyLegalEntity')
-    ET.SubElement(supplier_legal, cbc + 'RegistrationName').text = supplier.get('name', '')
-    ET.SubElement(supplier_legal, cbc + 'CompanyID', schemeID='0151').text = supplier_abn
+    ET.SubElement(supplier_legal, cbc + 'RegistrationName').text = escape_xml_text(supplier.get('name', ''))
+    ET.SubElement(supplier_legal, cbc + 'CompanyID', schemeID='0151').text = escape_xml_text(supplier_abn)
     
     # 客户信息
     customer = data.get('customer', {})
@@ -62,21 +78,21 @@ def generate_ubl_xml(data):
     customer_party_elem = ET.SubElement(customer_party, cac + 'Party')
     
     customer_abn = customer.get('abn', '').replace(' ', '')
-    ET.SubElement(customer_party_elem, cbc + 'EndpointID', schemeID='0151').text = customer_abn
+    ET.SubElement(customer_party_elem, cbc + 'EndpointID', schemeID='0151').text = escape_xml_text(customer_abn)
     
     customer_name_elem = ET.SubElement(customer_party_elem, cac + 'PartyName')
-    ET.SubElement(customer_name_elem, cbc + 'Name').text = customer.get('name', '')
+    ET.SubElement(customer_name_elem, cbc + 'Name').text = escape_xml_text(customer.get('name', ''))
     
     customer_address = ET.SubElement(customer_party_elem, cac + 'PostalAddress')
-    ET.SubElement(customer_address, cbc + 'StreetName').text = customer.get('street_name', '')
-    ET.SubElement(customer_address, cbc + 'CityName').text = customer.get('city_name', '')
-    ET.SubElement(customer_address, cbc + 'PostalZone').text = customer.get('postal_zone', '')
+    ET.SubElement(customer_address, cbc + 'StreetName').text = escape_xml_text(customer.get('street_name', ''))
+    ET.SubElement(customer_address, cbc + 'CityName').text = escape_xml_text(customer.get('city_name', ''))
+    ET.SubElement(customer_address, cbc + 'PostalZone').text = escape_xml_text(customer.get('postal_zone', ''))
     customer_country = ET.SubElement(customer_address, cac + 'Country')
     ET.SubElement(customer_country, cbc + 'IdentificationCode').text = 'AU'
     
     customer_legal = ET.SubElement(customer_party_elem, cac + 'PartyLegalEntity')
-    ET.SubElement(customer_legal, cbc + 'RegistrationName').text = customer.get('name', '')
-    ET.SubElement(customer_legal, cbc + 'CompanyID', schemeID='0151').text = customer_abn
+    ET.SubElement(customer_legal, cbc + 'RegistrationName').text = escape_xml_text(customer.get('name', ''))
+    ET.SubElement(customer_legal, cbc + 'CompanyID', schemeID='0151').text = escape_xml_text(customer_abn)
     
     # 计算税额（按税率分组）
     line_items = data.get('line_items', [])
@@ -138,7 +154,7 @@ def generate_ubl_xml(data):
         ET.SubElement(invoice_line, cbc + 'LineExtensionAmount', currencyID=currency).text = f'{line_total:.2f}'
         
         item_elem = ET.SubElement(invoice_line, cac + 'Item')
-        ET.SubElement(item_elem, cbc + 'Name').text = item.get('name', '')
+        ET.SubElement(item_elem, cbc + 'Name').text = escape_xml_text(item.get('name', ''))
         
         tax_percent = float(item.get('tax_percent', 0))
         classified_tax = ET.SubElement(item_elem, cac + 'ClassifiedTaxCategory')

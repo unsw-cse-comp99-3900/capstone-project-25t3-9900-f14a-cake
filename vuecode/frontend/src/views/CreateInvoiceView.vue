@@ -32,7 +32,8 @@ const {
   addLineItem,
   removeLineItem,
   updateLineTotal,
-  validateAllLineItems
+  validateAllLineItems,
+  parseAndFillAddress
 } = useInvoiceForm()
 
 const {
@@ -70,6 +71,17 @@ const goBack = () => {
 
 const handleOCRSuccess = (extracted, fileCreatedAt) => {
   invoiceForm.value = JSON.parse(JSON.stringify(extracted))
+  
+  // 自动解析并填充供应商地址（使用OCR的parsed_address）
+  if (invoiceForm.value.supplier.parsed_address) {
+    parseAndFillAddress(invoiceForm.value.supplier.parsed_address, invoiceForm.value.supplier)
+  }
+  
+  // 自动解析并填充客户地址（使用OCR的parsed_address）
+  if (invoiceForm.value.customer.parsed_address) {
+    parseAndFillAddress(invoiceForm.value.customer.parsed_address, invoiceForm.value.customer)
+  }
+  
   currentStep.value = 1
   
   // 设置文件创建时间（用于准确计算剩余时间）
@@ -466,17 +478,29 @@ const prevStep = () => {
                 </el-col>
                 <el-col :span="24">
                   <el-form-item label="Street Name" prop="supplier.street_name">
-                    <el-input v-model="invoiceForm.supplier.street_name" placeholder="123 Main Street" />
+                    <el-input 
+                      v-model="invoiceForm.supplier.street_name" 
+                      placeholder="123 Main Street" 
+                      maxlength="100"
+                    />
                   </el-form-item>
                 </el-col>
                 <el-col :span="12">
                   <el-form-item label="City" prop="supplier.city_name">
-                    <el-input v-model="invoiceForm.supplier.city_name" placeholder="Sydney" />
+                    <el-input 
+                      v-model="invoiceForm.supplier.city_name" 
+                      placeholder="Sydney" 
+                      maxlength="50"
+                    />
                   </el-form-item>
                 </el-col>
                 <el-col :span="12">
                   <el-form-item label="Postal Code" prop="supplier.postal_zone">
-                    <el-input v-model="invoiceForm.supplier.postal_zone" placeholder="2000" />
+                    <el-input 
+                      v-model="invoiceForm.supplier.postal_zone" 
+                      placeholder="2000" 
+                      maxlength="50"
+                    />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -502,17 +526,29 @@ const prevStep = () => {
                 </el-col>
                 <el-col :span="24">
                   <el-form-item label="Street Name" prop="customer.street_name">
-                    <el-input v-model="invoiceForm.customer.street_name" placeholder="456 Customer Road" />
+                    <el-input 
+                      v-model="invoiceForm.customer.street_name" 
+                      placeholder="456 Customer Road" 
+                      maxlength="100"
+                    />
                   </el-form-item>
                 </el-col>
                 <el-col :span="12">
                   <el-form-item label="City" prop="customer.city_name">
-                    <el-input v-model="invoiceForm.customer.city_name" placeholder="Melbourne" />
+                    <el-input 
+                      v-model="invoiceForm.customer.city_name" 
+                      placeholder="Melbourne" 
+                      maxlength="50"
+                    />
                   </el-form-item>
                 </el-col>
                 <el-col :span="12">
                   <el-form-item label="Postal Code" prop="customer.postal_zone">
-                    <el-input v-model="invoiceForm.customer.postal_zone" placeholder="3000" />
+                    <el-input 
+                      v-model="invoiceForm.customer.postal_zone" 
+                      placeholder="3000" 
+                      maxlength="50"
+                    />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -656,7 +692,7 @@ const prevStep = () => {
 }
 
 .back-btn {
-  color: #9ca3af;
+  color: #f1f5fb !important;
 }
 
 .main-content {

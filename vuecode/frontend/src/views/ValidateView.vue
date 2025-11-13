@@ -476,7 +476,7 @@ const prevStep = () => {
 }
 
 .back-btn {
-  color: #9ca3af;
+  color: #f1f5fb !important;
 }
 
 .main-content {

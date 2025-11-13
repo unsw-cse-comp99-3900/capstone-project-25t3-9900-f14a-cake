@@ -63,9 +63,18 @@ export function useInvoiceForm() {
     },
     supplier: {
       name: [{ required: true, message: 'Supplier name is required', trigger: 'blur' }],
-      street_name: [{ required: true, message: 'Street name is required', trigger: 'blur' }],
-      city_name: [{ required: true, message: 'City is required', trigger: 'blur' }],
-      postal_zone: [{ required: true, message: 'Postal code is required', trigger: 'blur' }],
+      street_name: [
+        { required: true, message: 'Street name is required', trigger: 'blur' },
+        { max: 100, message: 'Street name cannot exceed 100 characters', trigger: 'blur' }
+      ],
+      city_name: [
+        { required: true, message: 'City is required', trigger: 'blur' },
+        { max: 50, message: 'City name cannot exceed 50 characters', trigger: 'blur' }
+      ],
+      postal_zone: [
+        { required: true, message: 'Postal code is required', trigger: 'blur' },
+        { max: 50, message: 'Postal code cannot exceed 50 characters', trigger: 'blur' }
+      ],
       abn: [
         { required: true, message: 'ABN is required', trigger: 'blur' },
         { pattern: /^\d{11}$/, message: 'ABN must be 11 digits', trigger: 'blur' }
@@ -73,9 +82,18 @@ export function useInvoiceForm() {
     },
     customer: {
       name: [{ required: true, message: 'Customer name is required', trigger: 'blur' }],
-      street_name: [{ required: true, message: 'Street name is required', trigger: 'blur' }],
-      city_name: [{ required: true, message: 'City is required', trigger: 'blur' }],
-      postal_zone: [{ required: true, message: 'Postal code is required', trigger: 'blur' }],
+      street_name: [
+        { required: true, message: 'Street name is required', trigger: 'blur' },
+        { max: 100, message: 'Street name cannot exceed 100 characters', trigger: 'blur' }
+      ],
+      city_name: [
+        { required: true, message: 'City is required', trigger: 'blur' },
+        { max: 50, message: 'City name cannot exceed 50 characters', trigger: 'blur' }
+      ],
+      postal_zone: [
+        { required: true, message: 'Postal code is required', trigger: 'blur' },
+        { max: 50, message: 'Postal code cannot exceed 50 characters', trigger: 'blur' }
+      ],
       abn: [
         { required: true, message: 'ABN is required', trigger: 'blur' },
         { pattern: /^\d{11}$/, message: 'ABN must be 11 digits', trigger: 'blur' }
@@ -173,6 +191,43 @@ export function useInvoiceForm() {
     return true
   }
 
+  // 从OCR的parsed_address提取并填充地址字段
+  const parseAndFillAddress = (parsedAddress, targetObj) => {
+    if (!parsedAddress || typeof parsedAddress !== 'object') {
+      return
+    }
+    
+    try {
+      // 提取street_name: 包括unit(如果有) + house_number + road
+      const streetParts = []
+      if (parsedAddress.unit) {
+        streetParts.push(parsedAddress.unit)
+      }
+      if (parsedAddress.house_number) {
+        streetParts.push(parsedAddress.house_number)
+      }
+      if (parsedAddress.road) {
+        streetParts.push(parsedAddress.road)
+      }
+      // 如果以上都没有，尝试使用street_address
+      if (streetParts.length === 0 && parsedAddress.street_address) {
+        streetParts.push(parsedAddress.street_address)
+      }
+      
+      const streetName = streetParts.join(' ').substring(0, 100) // 限制100字符
+      const cityName = (parsedAddress.city || '').substring(0, 50) // 限制50字符
+      const postalZone = (parsedAddress.postcode || '').substring(0, 50) // 限制50字符
+      
+      // 填充到目标对象
+      if (streetName) targetObj.street_name = streetName
+      if (cityName) targetObj.city_name = cityName
+      if (postalZone) targetObj.postal_zone = postalZone
+    } catch (error) {
+      console.error('Address parsing error:', error)
+      // 解析失败时不做任何操作，保持原有值
+    }
+  }
+
   return {
     invoiceForm,
     formRules,
@@ -185,7 +240,8 @@ export function useInvoiceForm() {
     removeLineItem,
     updateLineTotal,
     validateLineItem,
-    validateAllLineItems
+    validateAllLineItems,
+    parseAndFillAddress
   }
 }
 
