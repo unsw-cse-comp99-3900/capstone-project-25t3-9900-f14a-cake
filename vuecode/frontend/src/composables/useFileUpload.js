@@ -8,15 +8,29 @@ export function useFileUpload() {
   const ocrFilename = ref('')
 
   const beforeUpload = (file) => {
+    // 检查文件扩展名
+    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png']
+    const fileExtension = file.name.split('.').pop().toLowerCase()
+    const isAllowedExtension = allowedExtensions.includes(fileExtension)
+    
+    // 检查MIME类型
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
     const isAllowedType = allowedTypes.includes(file.type)
-    const fileSizeMB = file.size / 1024 / 1024
-    const isLt10M = fileSizeMB < 10
-
-    if (!isAllowedType) {
-      ElMessage.error('Only PDF, JPG, JPEG, and PNG files are supported!')
+    
+    // 双重验证：扩展名和MIME类型都要检查
+    if (!isAllowedExtension || !isAllowedType) {
+      ElMessage.error({
+        message: 'Only PDF, JPG, JPEG, and PNG files are supported!',
+        duration: 5000,
+        showClose: true
+      })
       return false
     }
+    
+    // 检查文件大小
+    const fileSizeMB = file.size / 1024 / 1024
+    const isLt10M = fileSizeMB < 10
+    
     if (!isLt10M) {
       ElMessage.error({
         message: `File size is ${fileSizeMB.toFixed(2)}MB, which exceeds the 10MB limit. Please upload a smaller file.`,
@@ -25,10 +39,41 @@ export function useFileUpload() {
       })
       return false
     }
+    
     return true
   }
 
   const handleFileChange = (file) => {
+    // 再次验证文件类型和大小（防止绕过beforeUpload）
+    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png']
+    const fileExtension = file.name.split('.').pop().toLowerCase()
+    const isAllowedExtension = allowedExtensions.includes(fileExtension)
+    
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+    const isAllowedType = allowedTypes.includes(file.raw.type)
+    
+    const fileSizeMB = file.raw.size / 1024 / 1024
+    const isLt10M = fileSizeMB < 10
+    
+    // 只有通过验证的文件才能被添加
+    if (!isAllowedExtension || !isAllowedType) {
+      ElMessage.error({
+        message: 'Only PDF, JPG, JPEG, and PNG files are supported!',
+        duration: 5000,
+        showClose: true
+      })
+      return
+    }
+    
+    if (!isLt10M) {
+      ElMessage.error({
+        message: `File size is ${fileSizeMB.toFixed(2)}MB, which exceeds the 10MB limit. Please upload a smaller file.`,
+        duration: 5000,
+        showClose: true
+      })
+      return
+    }
+    
     uploadFile.value = file.raw
     fileList.value = [file]
   }
@@ -142,4 +187,3 @@ export function useFileUpload() {
     downloadJSON
   }
 }
-
