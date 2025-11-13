@@ -27,26 +27,28 @@ def extract_invoice_fields(ocr_data):
             'buyer_reference': 'N/A'
         }
         
-        # 供应商信息 - 从vendor获取
+        # 供应商信息 - 从vendor获取，包括parsed_address
         vendor = ocr_data.get('vendor', {})
         supplier_info = {
             'name': vendor.get('raw_name', '') or vendor.get('name', ''),
-            'street_name': '',  # 用户填写
-            'city_name': '',    # 用户填写
-            'postal_zone': '',  # 用户填写
-            'abn': '',          # 用户填写
-            'raw_address': vendor.get('raw_address', '') or vendor.get('address', '')
+            'street_name': '',
+            'city_name': '',
+            'postal_zone': '',
+            'abn': '',
+            'raw_address': vendor.get('raw_address', '') or vendor.get('address', ''),
+            'parsed_address': vendor.get('parsed_address', {})
         }
         
-        # 客户信息 - 从bill_to只获取name
+        # 客户信息 - 从bill_to获取，包括parsed_address
         bill_to = ocr_data.get('bill_to', {})
         customer_info = {
             'name': bill_to.get('name', ''),
-            'street_name': '',  # 用户填写
-            'city_name': '',    # 用户填写
-            'postal_zone': '',  # 用户填写
-            'abn': '',          # 用户填写
-            'raw_address': bill_to.get('address', '')
+            'street_name': '',
+            'city_name': '',
+            'postal_zone': '',
+            'abn': '',
+            'raw_address': bill_to.get('address', ''),
+            'parsed_address': bill_to.get('parsed_address', {})
         }
         
         # 商品明细 - 从line_items提取
@@ -98,8 +100,8 @@ def extract_invoice_fields(ocr_data):
         traceback.print_exc()
         return {
             'invoice_info': {'invoice_number': '', 'issue_date': '', 'due_date': '', 'currency_code': 'AUD', 'buyer_reference': 'N/A'},
-            'supplier': {'name': '', 'street_name': '', 'city_name': '', 'postal_zone': '', 'abn': '', 'raw_address': ''},
-            'customer': {'name': '', 'street_name': '', 'city_name': '', 'postal_zone': '', 'abn': '', 'raw_address': ''},
+            'supplier': {'name': '', 'street_name': '', 'city_name': '', 'postal_zone': '', 'abn': '', 'raw_address': '', 'parsed_address': {}},
+            'customer': {'name': '', 'street_name': '', 'city_name': '', 'postal_zone': '', 'abn': '', 'raw_address': '', 'parsed_address': {}},
             'line_items': [{'name': '', 'quantity': 1.0, 'unit_code': 'EA', 'unit_price': 0.0, 'line_total': 0.0, 'tax_percent': None}],
             'summary': {'subtotal': 0.0, 'tax_amount': 0.0, 'total': 0.0}
         }
@@ -113,7 +115,8 @@ def process_ocr(file, client_id, authorization, upload_folder):
     payload = {
         "file_data": encoded_file,
         "categories": ["Invoices"],
-        "auto_delete": True
+        "auto_delete": True,
+        "parse_address": True
     }
     
     headers = {
