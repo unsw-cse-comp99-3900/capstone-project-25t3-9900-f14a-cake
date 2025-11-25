@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies (this layer will be cached)
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Default command: run tests
+CMD ["pnpm", "test"]
+
+
+
+
+

@@ -1,0 +1,113 @@
+/* Theme CSS Variables */
+
+:root[data-theme="dark"] {
+  /* Background Colors */
+  --bg-primary: #0f1419;
+  --bg-secondary: #1a2332;
+  --bg-tertiary: rgba(0, 0, 0, 0.2);
+  --bg-card: rgba(255, 255, 255, 0.03);
+  --bg-input: rgba(255, 255, 255, 0.1);
+  --bg-hover: rgba(16, 185, 129, 0.1);
+  --bg-active: rgba(16, 185, 129, 0.15);
+  --bg-navbar: rgba(15, 20, 25, 0.95);
+  --bg-section: rgba(0, 0, 0, 0.2);
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --text-muted: #cbd5e1;
+  
+  /* Accent Colors */
+  --accent-primary: #10b981;
+  --accent-secondary: #60a5fa;
+  --accent-warning: #f59e0b;
+  --accent-danger: #f56c6c;
+  --accent-success: #10b981;
+  
+  /* Link Button Colors (for Sign Up/Sign In buttons) */
+  --link-button-color: #fafa77;
+  --link-button-hover-color: #f59e0b;
+  
+  /* Border Colors */
+  --border-primary: rgba(255, 255, 255, 0.08);
+  --border-secondary: rgba(255, 255, 255, 0.1);
+  --border-accent: rgba(16, 185, 129, 0.25);
+  --border-focus: #10b981;
+  
+  /* Shadow */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  
+  /* Gradient */
+  --gradient-primary: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+  --gradient-card: linear-gradient(135deg, rgba(15, 20, 25, 0.8) 0%, rgba(26, 35, 50, 0.8) 100%);
+}
+
+:root[data-theme="light"] {
+  /* Background Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: rgba(0, 0, 0, 0.02);
+  --bg-card: #ffffff;
+  --bg-input: #f1f5f9;
+  --bg-hover: rgba(16, 185, 129, 0.08);
+  --bg-active: rgba(16, 185, 129, 0.12);
+  --bg-navbar: rgba(255, 255, 255, 0.95);
+  --bg-section: rgba(0, 0, 0, 0.02);
+  
+  /* Text Colors */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-tertiary: #475569;
+  --text-muted: #1e293b;
+  
+  /* Accent Colors */
+  --accent-primary: #059669;
+  --accent-secondary: #2563eb;
+  --accent-warning: #d97706;
+  --accent-danger: #dc2626;
+  --accent-success: #059669;
+  
+  /* Link Button Colors (for Sign Up/Sign In buttons) */
+  --link-button-color: #2563eb;
+  --link-button-hover-color: #1d4ed8;
+  
+  /* Border Colors */
+  --border-primary: rgba(0, 0, 0, 0.15);
+  --border-secondary: rgba(0, 0, 0, 0.18);
+  --border-accent: rgba(5, 150, 105, 0.3);
+  --border-focus: #059669;
+  
+  /* Shadow */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  
+  /* Gradient */
+  --gradient-primary: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  --gradient-card: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+}
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+

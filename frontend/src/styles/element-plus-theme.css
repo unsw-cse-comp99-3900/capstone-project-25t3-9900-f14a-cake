@@ -1,0 +1,320 @@
+/* Element Plus Theme Overrides */
+
+/* Input Fields */
+:deep(.el-input__wrapper) {
+  background-color: var(--bg-input) !important;
+  box-shadow: 0 0 0 1px var(--border-secondary) inset !important;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+:deep(.el-input__wrapper:hover),
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px var(--border-focus) inset !important;
+}
+
+:deep(.el-input__inner) {
+  color: var(--text-primary) !important;
+  transition: color 0.3s ease;
+}
+
+/* Fix browser autofill background color */
+:deep(.el-input__inner:-webkit-autofill),
+:deep(.el-input__inner:-webkit-autofill:hover),
+:deep(.el-input__inner:-webkit-autofill:focus),
+:deep(.el-input__inner:-webkit-autofill:active) {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: var(--text-primary) !important;
+}
+
+/* Form Labels */
+:deep(.el-form-item__label) {
+  color: var(--text-secondary) !important;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+/* Form Errors */
+:deep(.el-form-item.is-error .el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--accent-danger) inset !important;
+}
+
+:deep(.el-form-item__error) {
+  color: var(--accent-danger);
+}
+
+/* Select Dropdown */
+:deep(.el-select .el-input__wrapper) {
+  background-color: var(--bg-input) !important;
+}
+
+:deep(.el-select__wrapper) {
+  background-color: var(--bg-input) !important;
+}
+
+:deep(.el-select__wrapper.el-tooltip__trigger) {
+  background-color: var(--bg-input) !important;
+}
+
+:deep(.el-select-dropdown) {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-primary) !important;
+}
+
+:deep(.el-select-dropdown__item) {
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-select-dropdown__item:hover) {
+  background-color: var(--bg-hover) !important;
+}
+
+/* Number Input */
+:deep(.el-input-number .el-input__wrapper) {
+  background-color: var(--bg-input) !important;
+}
+
+/* Table */
+:deep(.el-table) {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-table th) {
+  background-color: var(--bg-section) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-primary) !important;
+}
+
+:deep(.el-table th.el-table-fixed-column--right) {
+  background-color: var(--bg-section) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-table td) {
+  background-color: transparent !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-table td.el-table-fixed-column--right) {
+  background-color: transparent !important;
+  border-color: var(--border-primary) !important;
+}
+
+:deep(.el-table tr) {
+  background-color: transparent !important;
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
+  background-color: var(--bg-section) !important;
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table-fixed-column--right) {
+  background-color: var(--bg-section) !important;
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped:hover td) {
+  background-color: var(--bg-hover) !important;
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped:hover td.el-table-fixed-column--right) {
+  background-color: var(--bg-hover) !important;
+}
+
+:deep(.el-table__body tr:hover > td) {
+  background-color: var(--bg-hover) !important;
+}
+
+:deep(.el-table__body tr:hover > td.el-table-fixed-column--right) {
+  background-color: var(--bg-hover) !important;
+}
+
+/* Pagination */
+:deep(.el-pagination) {
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-pagination .el-pagination__total) {
+  color: var(--text-secondary) !important;
+}
+
+:deep(.el-pagination button) {
+  color: var(--text-secondary) !important;
+  background-color: var(--bg-input) !important;
+  border-color: var(--border-primary) !important;
+}
+
+:deep(.el-pagination button:hover) {
+  color: var(--accent-primary) !important;
+  background-color: var(--bg-hover) !important;
+}
+
+:deep(.el-pagination button:disabled) {
+  color: var(--text-tertiary) !important;
+  background-color: var(--bg-input) !important;
+  opacity: 0.5;
+}
+
+:deep(.el-pagination .el-pager li) {
+  background-color: var(--bg-input) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-primary) !important;
+}
+
+:deep(.el-pagination .el-pager li:hover) {
+  color: var(--accent-primary) !important;
+  background-color: var(--bg-hover) !important;
+}
+
+:deep(.el-pagination .el-pager li.is-active) {
+  background-color: var(--accent-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--accent-primary) !important;
+}
+
+/* Pagination Select Dropdown */
+:deep(.el-pagination .el-select .el-input__wrapper) {
+  background-color: var(--bg-input) !important;
+  border-color: var(--border-primary) !important;
+}
+
+:deep(.el-pagination .el-select .el-input__wrapper:hover) {
+  border-color: var(--border-focus) !important;
+}
+
+:deep(.el-pagination .el-select .el-select__placeholder),
+:deep(.el-pagination .el-select .el-select__selected-item) {
+  color: var(--text-secondary) !important;
+}
+
+:deep(.el-pagination .el-select .el-select__caret) {
+  color: var(--text-secondary) !important;
+}
+
+:deep(.el-pagination .el-select .el-select__wrapper:hover .el-select__caret) {
+  color: var(--accent-primary) !important;
+}
+
+/* Pagination Input (Go to) */
+:deep(.el-pagination .el-pagination__jump .el-pagination__editor) {
+  background-color: var(--bg-input) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-pagination .el-pagination__jump .el-pagination__editor:focus) {
+  border-color: var(--border-focus) !important;
+}
+
+:deep(.el-pagination .el-pagination__jump .el-pagination__editor::placeholder) {
+  color: var(--text-tertiary) !important;
+}
+
+/* Card */
+:deep(.el-card) {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-card__header) {
+  border-bottom-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Alert */
+:deep(.el-alert) {
+  background-color: var(--bg-section) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Dialog */
+:deep(.el-dialog) {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-dialog__header) {
+  border-bottom-color: var(--border-primary) !important;
+}
+
+:deep(.el-dialog__title) {
+  color: var(--text-primary) !important;
+}
+
+/* Message Box */
+:deep(.el-message-box) {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-primary) !important;
+}
+
+:deep(.el-message-box__title) {
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-message-box__message) {
+  color: var(--text-secondary) !important;
+}
+
+/* Button Text */
+:deep(.el-button.is-text) {
+  color: var(--text-secondary) !important;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+:deep(.el-button.is-text:hover) {
+  color: var(--accent-primary) !important;
+  background-color: var(--bg-hover) !important;
+}
+
+/* Upload */
+:deep(.el-upload) {
+  background-color: var(--bg-input) !important;
+  border-color: var(--border-secondary) !important;
+}
+
+:deep(.el-upload:hover) {
+  border-color: var(--border-focus) !important;
+}
+
+/* Tag */
+:deep(.el-tag) {
+  background-color: var(--bg-section) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+  font-weight: 500;
+}
+
+:deep(.el-tag.el-tag--info) {
+  background-color: var(--bg-section) !important;
+  border-color: var(--border-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.el-tag.el-tag--success) {
+  color: var(--accent-success) !important;
+}
+
+:deep(.el-tag.el-tag--warning) {
+  color: var(--accent-warning) !important;
+}
+
+:deep(.el-tag.el-tag--danger) {
+  color: var(--accent-danger) !important;
+}
+
+:deep(.el-tag.el-tag--primary) {
+  color: var(--accent-primary) !important;
+}
+
+/* Switch */
+:deep(.el-switch__core) {
+  background-color: var(--bg-input) !important;
+}
+
+:deep(.el-switch.is-checked .el-switch__core) {
+  background-color: var(--accent-primary) !important;
+}
+
