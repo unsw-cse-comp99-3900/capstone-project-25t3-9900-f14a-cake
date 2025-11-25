@@ -1,0 +1,51 @@
+# =============================================
+# VERYFI API (OCR & Receipt Processing)
+# https://veryfi.com/
+# =============================================
+VERYFI_CLIENT_ID=your_veryfi_client_id_here
+VERYFI_AUTHORIZATION=apikey your_client_id:your_client_secret
+
+# =============================================
+# ESS VALIDATOR (Authentication Service)
+# JWT token for API access (auto-refreshed in app)
+# =============================================
+ESS_VALIDATOR_TOKEN=your_jwt_access_token_here
+ESS_VALIDATOR_CLIENT_ID=your_cognito_client_id
+ESS_VALIDATOR_CLIENT_SECRET=your_cognito_client_secret
+ESS_VALIDATOR_TOKEN_URL=https://your-cognito-domain/oauth2/token
+
+# =============================================
+# FILE UPLOAD CONFIGURATION
+# =============================================
+UPLOAD_FOLDER=uploads
+MAX_FILE_SIZE_MB=10
+
+# =============================================
+# FILE CLEANUP (Auto-delete old uploads)
+# =============================================
+FILE_MAX_AGE_MINUTES=30
+FILE_CLEANUP_INTERVAL_MINUTES=5
+
+# =============================================
+# EMAIL (Mailgun - Transactional Emails)
+# https://www.mailgun.com/
+# =============================================
+MAILGUN_DOMAIN=sandbox1234567890ab.mailgun.org
+MAILGUN_API_KEY=key-1234567890abcdef1234567890abcdef
+MAILGUN_FROM_EMAIL=noreply@yourdomain.com
+
+# =============================================
+# DATABASE (PostgreSQL)
+# ⚠️ Use strong passwords in production!
+# =============================================
+DATABASE_URL=postgresql://invoice_user:invoice_db_password@localhost:5432/invoice_db
+DB_PASSWORD=invoice_db_password
+
+
+# =============================================
+# JWT AUTHENTICATION
+# ⚠️ MUST CHANGE IN PRODUCTION!
+# =============================================
+JWT_SECRET_KEY=your_very_long_random_secret_here  # e.g., openssl rand -hex 32
+JWT_ACCESS_TOKEN_EXPIRES=3600        # 1 hour (seconds)
+JWT_REFRESH_TOKEN_EXPIRES=2592000    # 30 days (seconds)
